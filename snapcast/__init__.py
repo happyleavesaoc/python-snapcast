@@ -13,16 +13,21 @@ _NEWLINE = b'\r\n'
 _ENCODING = 'utf-8'
 _TIMEOUT = 0.5
 
-SYSTEM_GETSTATUS = 'System.GetStatus'
+SERVER_GETSTATUS = 'Server.GetStatus'
+SERVER_DELETECLIENT = 'Server.DeleteClient'
 CLIENT_SETNAME = 'Client.SetName'
 CLIENT_SETLATENCY = 'Client.SetLatency'
 CLIENT_SETMUTE = 'Client.SetMute'
 CLIENT_SETVOLUME = 'Client.SetVolume'
 CLIENT_ONUPDATE = 'Client.OnUpdate'
+CLIENT_ONDELETE = 'Client.OnDelete'
+CLIENT_ONCONNECT = 'Client.OnConnect'
+CLIENT_ONDISCONNECT = 'Client.OnDisconnect'
 
-_EVENTS = [CLIENT_ONUPDATE]
-_METHODS = [SYSTEM_GETSTATUS, CLIENT_SETNAME, CLIENT_SETLATENCY,
-            CLIENT_SETMUTE, CLIENT_SETVOLUME]
+_EVENTS = [CLIENT_ONUPDATE, CLIENT_ONCONNECT, CLIENT_ONDISCONNECT,
+           CLIENT_ONDELETE]
+_METHODS = [SERVER_GETSTATUS, SERVER_DELETECLIENT, CLIENT_SETNAME,
+            CLIENT_SETLATENCY, CLIENT_SETMUTE, CLIENT_SETVOLUME]
 
 
 class Snapclient:
@@ -32,6 +37,11 @@ class Snapclient:
         self._mac = data.get('MAC')
         self._last_seen = None
         self.update(data)
+
+    @property
+    def mac(self):
+        """ MAC. """
+        return self._mac
 
     @property
     def identifier(self):
@@ -123,11 +133,19 @@ class Snapserver:
         tcp.start()
         self.synchronize()
 
+    def delete(self, client):
+        """ Delete a client.
+
+        Note that the `del` will not be necessary
+        once the `on_delete` event is properly handled.
+        """
+        mac = self._client(SERVER_DELETECLIENT, client.mac)
+        del self._clients[mac]
+
     @property
     def clients(self):
         """ Clients. """
-        for client in self._clients.values():
-            yield client
+        return list(self._clients.values())
 
     @property
     def version(self):
@@ -136,7 +154,7 @@ class Snapserver:
 
     def status(self):
         """ System status. """
-        return self._transact(SYSTEM_GETSTATUS)
+        return self._transact(SERVER_GETSTATUS)
 
     def client_name(self, mac, name):
         """ Set client name. """
@@ -162,7 +180,7 @@ class Snapserver:
         but instead we get a full system status, so we
         have to extract just the relevant client record.
         """
-        for client in self._client(SYSTEM_GETSTATUS, mac)['clients']:
+        for client in self._client(SERVER_GETSTATUS, mac)['clients']:
             if client.get('MAC') == mac:
                 return client
         raise ValueError('No client at given mac')
@@ -216,8 +234,16 @@ class Snapserver:
     def _on_event(self, response):
         """ Handle incoming events. """
         if response.get('method') in _EVENTS:
-            if response.get('method') == CLIENT_ONUPDATE:
-                self._on_update(response.get('params').get('data'))
+            event = response.get('method')
+            data = response.get('params').get('data')
+            if event == CLIENT_ONUPDATE:
+                self._on_update(data)
+            elif event == CLIENT_ONDELETE:
+                self._on_delete(data)
+            elif event == CLIENT_ONCONNECT:
+                self._on_connect(data)
+            elif event == CLIENT_ONDISCONNECT:
+                self._on_disconnect(data)
         else:
             raise ValueError('Unsupported event')
 
@@ -227,6 +253,19 @@ class Snapserver:
             self._clients.get(data.get('MAC')).update(data)
         else:
             raise ValueError('Updating unknown client')
+
+    def _on_delete(self, data):
+        """ Handle delete event. """
+        if data.get('MAC') in self._clients:
+            del self._clients[data.get('MAC')]
+        else:
+            raise ValueError('Deleting unknown client')
+
+    def _on_connect(self, data):
+        self._on_update(data)
+
+    def _on_disconnect(self, data):
+        self._on_update(data)
 
     def _transact(self, method, params=None):
         """ Transact via JSON RPC TCP. """
