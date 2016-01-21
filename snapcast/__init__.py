@@ -136,8 +136,8 @@ class Snapserver:
     def delete(self, client):
         """ Delete a client.
 
-        Note that the `del` will not be necessary
-        once the `on_delete` event is properly handled.
+        Note that only other clients will receive
+        the ON_DELETE event.
         """
         mac = self._client(SERVER_DELETECLIENT, client.mac)
         del self._clients[mac]
