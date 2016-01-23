@@ -8,8 +8,11 @@ setup(
     license='MIT',
     author='happyleaves',
     author_email='happyleaves.tfr@gmail.com',
-    packages=['snapcast'],
-    install_requires=[],
+    packages=['snapcast', 'snapcast.client'],
+    install_requires=[
+        'pygobject>=3.12.0',
+        'construct>=2.5.2',
+    ],
     classifiers=[
         'License :: OSI Approved :: MIT License',
         'Operating System :: OS Independent',

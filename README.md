@@ -8,10 +8,12 @@ Control [Snapcast](https://github.com/badaix/snapcast) in Python 3. Reads client
 
 ## Usage
 
+### Control
 ```python
-import snapcast
+import snapcast.control
 
-server = snapcast.Snapserver('localhost', snapcast.CONTROL_PORT)
+server = snapcast.control.Snapserver('localhost', snapcast.control.CONTROL_PORT)
+
 for client in server.clients:
     # client is an instance of snapcast.Snapclient
     client.name = 'example'
@@ -25,4 +27,16 @@ for client in server.clients:
     print(client.identifier) # shows 'example'
     client.name = None
     print(client.identifier) # shows ip address
+```
+
+### Client
+Note: This is experimental. Synchronization is not yet supported.
+Requires GStreamer 1.0.
+```python
+import snapcast.client
+
+client = snapcast.client.Client('localhost', snapcast.client.SERVER_PORT)
+client.register()
+client.request_start() # this blocks
+
 ```
