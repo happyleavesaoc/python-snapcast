@@ -18,6 +18,7 @@ SERVER_DELETECLIENT = 'Server.DeleteClient'
 CLIENT_SETNAME = 'Client.SetName'
 CLIENT_SETLATENCY = 'Client.SetLatency'
 CLIENT_SETMUTE = 'Client.SetMute'
+CLIENT_SETSTREAM = 'Client.SetStream'
 CLIENT_SETVOLUME = 'Client.SetVolume'
 CLIENT_ONUPDATE = 'Client.OnUpdate'
 CLIENT_ONDELETE = 'Client.OnDelete'
@@ -27,7 +28,8 @@ CLIENT_ONDISCONNECT = 'Client.OnDisconnect'
 _EVENTS = [CLIENT_ONUPDATE, CLIENT_ONCONNECT, CLIENT_ONDISCONNECT,
            CLIENT_ONDELETE]
 _METHODS = [SERVER_GETSTATUS, SERVER_DELETECLIENT, CLIENT_SETNAME,
-            CLIENT_SETLATENCY, CLIENT_SETMUTE, CLIENT_SETVOLUME]
+            CLIENT_SETLATENCY, CLIENT_SETSTREAM, CLIENT_SETMUTE,
+            CLIENT_SETVOLUME]
 
 
 class Snapclient:
@@ -58,7 +60,7 @@ class Snapclient:
     @property
     def connected(self):
         """ Connected or not. """
-        return self._client.get('version')
+        return self._client.get('connected')
 
     @property
     def name(self):
@@ -95,6 +97,17 @@ class Snapclient:
                                                                     status)
 
     @property
+    def stream(self):
+        """ Volume percent. """
+        return self._client.get('stream')
+
+    @stream.setter
+    def stream(self, path):
+        """ Set client stream path. """
+        self._client['stream'] = self._server.client_stream(
+            self._mac, path)
+
+    @property
     def volume(self):
         """ Volume percent. """
         return self._client.get('volume').get('percent')
@@ -105,8 +118,7 @@ class Snapclient:
         if percent not in range(0, 101):
             raise ValueError('Volume percent out of range')
         self._client['volume']['percent'] = self._server.client_volume(
-            self._mac,
-            percent)
+            self._mac, percent)
 
     def update(self, data):
         """ Update client with new state. """
@@ -167,6 +179,10 @@ class Snapserver:
     def client_muted(self, mac, muted):
         """ Set client mute status. """
         return self._client(CLIENT_SETMUTE, mac, 'mute', muted)
+
+    def client_stream(self, mac, stream):
+        """ Set client stream. """
+        return self._client(CLIENT_SETSTREAM, mac, 'stream', stream)
 
     def client_volume(self, mac, volume):
         """ Set client volume. """

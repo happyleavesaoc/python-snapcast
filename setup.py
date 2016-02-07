@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='snapcast',
-    version='1.0.0',
+    version='1.1.0',
     description='Control Snapcast.',
     url='https://github.com/happyleavesaoc/python-snapcast/',
     license='MIT',
