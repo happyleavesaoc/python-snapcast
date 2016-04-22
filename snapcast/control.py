@@ -98,7 +98,7 @@ class Snapclient:
 
     @property
     def stream(self):
-        """ Volume percent. """
+        """ Stream. """
         return self._client.get('stream')
 
     @stream.setter
@@ -139,6 +139,7 @@ class Snapserver:
         self._conn = telnetlib.Telnet(host, port)
         self._host = host
         self._clients = {}
+        self._streams = {}
         self._buffer = {}
         self._queue = queue.Queue()
         tcp = threading.Thread(target=self._read, daemon=True)
@@ -158,6 +159,11 @@ class Snapserver:
     def clients(self):
         """ Clients. """
         return list(self._clients.values())
+
+    @property
+    def streams(self):
+        """ Streams. """
+        return list(self._streams.values())
 
     @property
     def version(self):
@@ -208,6 +214,8 @@ class Snapserver:
         self._clients = {}
         for client in status.get('clients'):
             self._clients[client.get('MAC')] = Snapclient(self, client)
+        for stream in status.get('streams'):
+            self._streams[stream.get('id')] = Snapstream.factory(stream)
 
     def _client(self, method, mac, key=None, value=None):
         """ Perform client transact. """
@@ -303,3 +311,61 @@ class Snapserver:
     def __repr__(self):
         """ String representation. """
         return 'Snapserver {} ({})'.format(self.version, self._host)
+
+
+class Snapstream:
+    """ Represents a snapcast stream. """
+    # pylint: disable=too-many-arguments
+    def __init__(self, scheme, host, path, name,
+                 codec=None, sampleformat=None, buffer_ms=None,
+                 stream_id=None):
+        self._scheme = scheme
+        self._host = host
+        self._path = path
+        self._name = name
+        self._codec = codec
+        self._sampleformat = sampleformat
+        self._buffer_ms = buffer_ms
+        if stream_id:
+            self._id = stream_id
+        else:
+            self._id = self.uri
+
+    @staticmethod
+    def factory(stream):
+        """ Produce a Snapstream.
+
+        Takes a dict from Snapserver stream list.
+        """
+        query = stream.get('query')
+        return Snapstream(stream.get('scheme'), stream.get('host'),
+                          stream.get('path'), query.get('name'),
+                          query.get('codec'), query.get('sampleformat'),
+                          query.get('buffer_ms'), stream.get('id'))
+
+    @property
+    def id(self):
+        """ Get stream id. """
+        return self._id
+
+    @property
+    def name(self):
+        """ Get stream name. """
+        return self._name
+
+    @property
+    def uri(self):
+        """ Get stream URI. """
+        uri = '{}://{}{}?name={}'.format(self._scheme, self._host, self._path,
+                                          self._name)
+        if self._codec:
+            uri += '&codec={}'.format(self._codec)
+        if self._sampleformat:
+            uri += '&sampleformat={}'.format(self._sampleformat)
+        if self._buffer_ms:
+            uri += '&buffer_ms={}'.format(self._buffer_ms)
+        return uri
+
+    def __repr__(self):
+        """ String representation. """
+        return self.uri
