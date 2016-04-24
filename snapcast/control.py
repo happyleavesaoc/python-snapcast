@@ -1,4 +1,7 @@
-""" Snapcast control. """
+""" Snapcast control.
+
+Compatible with version 0.6.0.
+"""
 
 import datetime
 import json
@@ -24,9 +27,10 @@ CLIENT_ONUPDATE = 'Client.OnUpdate'
 CLIENT_ONDELETE = 'Client.OnDelete'
 CLIENT_ONCONNECT = 'Client.OnConnect'
 CLIENT_ONDISCONNECT = 'Client.OnDisconnect'
+STREAM_ONUPDATE = 'Stream.OnUpdate'
 
 _EVENTS = [CLIENT_ONUPDATE, CLIENT_ONCONNECT, CLIENT_ONDISCONNECT,
-           CLIENT_ONDELETE]
+           CLIENT_ONDELETE, STREAM_ONUPDATE]
 _METHODS = [SERVER_GETSTATUS, SERVER_DELETECLIENT, CLIENT_SETNAME,
             CLIENT_SETLATENCY, CLIENT_SETSTREAM, CLIENT_SETMUTE,
             CLIENT_SETVOLUME]
@@ -36,7 +40,7 @@ class Snapclient:
     """ Represents a snapclient. """
     def __init__(self, server, data):
         self._server = server
-        self._mac = data.get('MAC')
+        self._mac = data.get('host').get('mac')
         self._last_seen = None
         self.update(data)
 
@@ -48,14 +52,14 @@ class Snapclient:
     @property
     def identifier(self):
         """ Readable identifier. """
-        if len(self._client.get('name')):
-            return self._client.get('name')
+        if len(self._client.get('config').get('name')):
+            return self._client.get('config').get('name')
         return self._client.get('IP')
 
     @property
     def version(self):
         """ Version. """
-        return self._client.get('version')
+        return self._client.get('snapclient').get('version')
 
     @property
     def connected(self):
@@ -65,60 +69,67 @@ class Snapclient:
     @property
     def name(self):
         """ Name. """
-        return self._client.get('name')
+        return self._client.get('config').get('name')
 
     @name.setter
     def name(self, name):
         """ Set a client name. """
         if not name:
             name = ''
-        self._client['name'] = self._server.client_name(self._mac, name)
+        self._client['config']['name'] = \
+            self._server.client_name(self._mac, name)
 
     @property
     def latency(self):
         """ Latency. """
-        return self._client.get('latency')
+        return self._client.get('config').get('latency')
 
     @latency.setter
     def latency(self, latency):
         """ Set client latency. """
-        self._client['latency'] = self._server.client_latency(self._mac,
-                                                              latency)
+        self._client['config']['latency'] = \
+            self._server.client_latency(self._mac, latency)
 
     @property
     def muted(self):
         """ Muted or not. """
-        return self._client.get('volume').get('muted')
+        return self._client.get('config').get('volume').get('muted')
 
     @muted.setter
     def muted(self, status):
         """ Set client mute status. """
-        self._client['volume']['muted'] = self._server.client_muted(self._mac,
-                                                                    status)
+        self._client['config']['volume']['muted'] = \
+            self._server.client_muted(self._mac, status)
 
     @property
     def stream(self):
         """ Stream. """
-        return self._client.get('stream')
+        return self._server.stream(self._client.get('config').get('stream'))
 
     @stream.setter
     def stream(self, path):
         """ Set client stream path. """
-        self._client['stream'] = self._server.client_stream(
+        if path not in self.available_streams():
+            raise ValueError('Invalid stream ID')
+        self._client['config']['stream'] = self._server.client_stream(
             self._mac, path)
+
+    def available_streams(self):
+        """ List of available stream IDs. """
+        return [stream.identifier for stream in self._server.streams]
 
     @property
     def volume(self):
         """ Volume percent. """
-        return self._client.get('volume').get('percent')
+        return self._client.get('config').get('volume').get('percent')
 
     @volume.setter
     def volume(self, percent):
         """ Set client volume percent. """
         if percent not in range(0, 101):
             raise ValueError('Volume percent out of range')
-        self._client['volume']['percent'] = self._server.client_volume(
-            self._mac, percent)
+        self._client['config']['volume']['percent'] = \
+            self._server.client_volume(self._mac, percent)
 
     def update(self, data):
         """ Update client with new state. """
@@ -188,7 +199,7 @@ class Snapserver:
 
     def client_stream(self, mac, stream):
         """ Set client stream. """
-        return self._client(CLIENT_SETSTREAM, mac, 'stream', stream)
+        return self._client(CLIENT_SETSTREAM, mac, 'id', stream)
 
     def client_volume(self, mac, volume):
         """ Set client volume. """
@@ -203,9 +214,16 @@ class Snapserver:
         have to extract just the relevant client record.
         """
         for client in self._client(SERVER_GETSTATUS, mac)['clients']:
-            if client.get('MAC') == mac:
+            if client.get('host').get('mac') == mac:
                 return client
         raise ValueError('No client at given mac')
+
+    def stream(self, stream_id):
+        """ Get a particular stream. """
+        if stream_id in self._streams:
+            return self._streams[stream_id]
+        else:
+            raise ValueError("Stream {} doesn't exist".format(stream_id))
 
     def synchronize(self):
         """ Synchronize snapserver. """
@@ -213,9 +231,11 @@ class Snapserver:
         self._version = status.get('server').get('version')
         self._clients = {}
         for client in status.get('clients'):
-            self._clients[client.get('MAC')] = Snapclient(self, client)
+            self._clients[client.get('host').get('mac')] = \
+                Snapclient(self, client)
+        self._streams = {}
         for stream in status.get('streams'):
-            self._streams[stream.get('id')] = Snapstream.factory(stream)
+            self._streams[stream.get('id')] = Snapstream(stream)
 
     def _client(self, method, mac, key=None, value=None):
         """ Perform client transact. """
@@ -245,15 +265,17 @@ class Snapserver:
             buf += raw
             try:
                 response = json.loads(buf.decode(_ENCODING))
-                if 'id' in response:
-                    self._buffer[response.get('id')] = response.get('result')
-                elif 'method' in response:
-                    self._on_event(response)
-                else:
-                    raise ValueError(response)
-                buf = b''
             except ValueError:
-                pass
+                continue
+            if 'id' in response:
+                if 'error' in response:
+                    raise ValueError(response.get('error').get('message'))
+                self._buffer[response.get('id')] = response.get('result')
+            elif 'method' in response:
+                self._on_event(response)
+            else:
+                raise ValueError(response)
+            buf = b''
 
     def _on_event(self, response):
         """ Handle incoming events. """
@@ -268,20 +290,24 @@ class Snapserver:
                 self._on_connect(data)
             elif event == CLIENT_ONDISCONNECT:
                 self._on_disconnect(data)
+            elif event == STREAM_ONUPDATE:
+                self._on_stream_update(data)
         else:
-            raise ValueError('Unsupported event')
+            raise ValueError('Unsupported event: {}', response.get('method'))
 
     def _on_update(self, data):
         """ Handle update event. """
-        if data.get('MAC') in self._clients:
-            self._clients.get(data.get('MAC')).update(data)
+        mac = data.get('host').get('mac')
+        if mac in self._clients:
+            self._clients.get(mac).update(data)
         else:
             raise ValueError('Updating unknown client')
 
     def _on_delete(self, data):
         """ Handle delete event. """
-        if data.get('MAC') in self._clients:
-            del self._clients[data.get('MAC')]
+        mac = data.get('host').get('mac')
+        if mac in self._clients:
+            del self._clients[mac]
         else:
             raise ValueError('Deleting unknown client')
 
@@ -290,6 +316,12 @@ class Snapserver:
 
     def _on_disconnect(self, data):
         self._on_update(data)
+
+    def _on_stream_update(self, data):
+        """ Handle stream update event. """
+        stream_id = data.get('id')
+        if stream_id in self._streams:
+            self._streams.get(stream_id).update(data)
 
     def _transact(self, method, params=None):
         """ Transact via JSON RPC TCP. """
@@ -315,57 +347,28 @@ class Snapserver:
 
 class Snapstream:
     """ Represents a snapcast stream. """
-    # pylint: disable=too-many-arguments
-    def __init__(self, scheme, host, path, name,
-                 codec=None, sampleformat=None, buffer_ms=None,
-                 stream_id=None):
-        self._scheme = scheme
-        self._host = host
-        self._path = path
-        self._name = name
-        self._codec = codec
-        self._sampleformat = sampleformat
-        self._buffer_ms = buffer_ms
-        if stream_id:
-            self._id = stream_id
-        else:
-            self._id = self.uri
-
-    @staticmethod
-    def factory(stream):
-        """ Produce a Snapstream.
-
-        Takes a dict from Snapserver stream list.
-        """
-        query = stream.get('query')
-        return Snapstream(stream.get('scheme'), stream.get('host'),
-                          stream.get('path'), query.get('name'),
-                          query.get('codec'), query.get('sampleformat'),
-                          query.get('buffer_ms'), stream.get('id'))
+    def __init__(self, data):
+        self.update(data)
 
     @property
-    def id(self):
+    def identifier(self):
         """ Get stream id. """
-        return self._id
+        return self._stream.get('id')
+
+    @property
+    def status(self):
+        """ Get stream status. """
+        return self._stream.get('status')
 
     @property
     def name(self):
         """ Get stream name. """
-        return self._name
+        return self._stream.get('uri').get('query').get('name')
 
-    @property
-    def uri(self):
-        """ Get stream URI. """
-        uri = '{}://{}{}?name={}'.format(self._scheme, self._host, self._path,
-                                          self._name)
-        if self._codec:
-            uri += '&codec={}'.format(self._codec)
-        if self._sampleformat:
-            uri += '&sampleformat={}'.format(self._sampleformat)
-        if self._buffer_ms:
-            uri += '&buffer_ms={}'.format(self._buffer_ms)
-        return uri
+    def update(self, data):
+        """ Update stream. """
+        self._stream = data
 
     def __repr__(self):
         """ String representation. """
-        return self.uri
+        return self.name
