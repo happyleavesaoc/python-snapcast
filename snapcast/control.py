@@ -1,6 +1,6 @@
 """ Snapcast control.
 
-Compatible with version 0.6.0.
+Compatible with version 0.8.0.
 """
 
 import datetime
@@ -9,12 +9,14 @@ import queue
 import random
 import threading
 import telnetlib
+import time
 
 
 CONTROL_PORT = 1705
 _NEWLINE = b'\r\n'
 _ENCODING = 'utf-8'
-_TIMEOUT = 0.5
+_READ_TIMEOUT = 0.5
+_RESP_TIMEOUT = 1.0
 
 SERVER_GETSTATUS = 'Server.GetStatus'
 SERVER_DELETECLIENT = 'Server.DeleteClient'
@@ -117,6 +119,10 @@ class Snapclient:
     def available_streams(self):
         """ List of available stream IDs. """
         return [stream.identifier for stream in self._server.streams]
+
+    def streams_by_name(self):
+        """ Get available stream objects by name. """
+        return {stream.name: stream for stream in self._server.streams}
 
     @property
     def volume(self):
@@ -261,7 +267,7 @@ class Snapserver:
                 message = self._queue.get()
                 self._conn.write(json.dumps(message)
                                  .encode(_ENCODING) + _NEWLINE)
-            raw = self._conn.read_until(_NEWLINE, _TIMEOUT)
+            raw = self._conn.read_until(_NEWLINE, _READ_TIMEOUT)
             buf += raw
             try:
                 response = json.loads(buf.decode(_ENCODING))
@@ -336,9 +342,11 @@ class Snapserver:
         if params:
             message['params'] = params
         self._queue.put(message)
-        while True:
+        end = time.time() + _RESP_TIMEOUT
+        while time.time() < end:
             if uid in self._buffer.keys():
                 return self._buffer.get(uid)
+        raise Exception('No response received')
 
     def __repr__(self):
         """ String representation. """
