@@ -16,7 +16,7 @@ CONTROL_PORT = 1705
 _NEWLINE = b'\r\n'
 _ENCODING = 'utf-8'
 _READ_TIMEOUT = 0.5
-_RESP_TIMEOUT = 1.0
+_RESP_TIMEOUT = 2.0  # In python2.7 response time is longer
 
 SERVER_GETSTATUS = 'Server.GetStatus'
 SERVER_DELETECLIENT = 'Server.DeleteClient'
@@ -152,14 +152,15 @@ class Snapclient:
 
 class Snapserver:
     """ Represents a snapserver. """
-    def __init__(self, host, port):
+    def __init__(self, host, port=CONTROL_PORT):
         self._conn = telnetlib.Telnet(host, port)
         self._host = host
         self._clients = {}
         self._streams = {}
         self._buffer = {}
         self._queue = queue.Queue()
-        tcp = threading.Thread(target=self._read, daemon=True)
+        tcp = threading.Thread(target=self._read)
+        tcp.setDaemon(True) #python2.7
         tcp.start()
         self.synchronize()
 
@@ -379,4 +380,4 @@ class Snapstream:
 
     def __repr__(self):
         """ String representation. """
-        return self.name
+        return 'Snapstream ({})'.format(self.name)
