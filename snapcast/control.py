@@ -126,7 +126,7 @@ class Snapclient(object):
         new_volume = self._client['config']['volume']
         new_volume['muted'] = status
         self._client['config']['volume']['muted'] = status
-        print(self._server.client_volume(self.identifier, new_volume))
+        self._server.client_volume(self.identifier, new_volume)
         _LOGGER.info('set muted to %s on %s', status, self.friendly_name)
 
     @property
@@ -142,7 +142,7 @@ class Snapclient(object):
         new_volume = self._client['config']['volume']
         new_volume['percent'] = percent
         self._client['config']['volume']['percent'] = percent
-        print(self._server.client_volume(self.identifier, new_volume))
+        self._server.client_volume(self.identifier, new_volume)
         _LOGGER.info('set volume to %s on %s', percent, self.friendly_name)
 
     def update_volume(self, data):
@@ -171,7 +171,6 @@ class Snapclient(object):
 
     def _callback(self, data):
         if self._callback_func and callable(self._callback_func):
-            print('CALLBACK GO')
             self._callback_func()
 
     def set_callback(self, func):
