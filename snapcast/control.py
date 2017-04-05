@@ -3,6 +3,7 @@
 Compatible with version 0.11.0.
 """
 
+import asyncio
 import datetime
 import json
 import queue
@@ -11,6 +12,7 @@ import random
 import threading
 import telnetlib
 import time
+from snapcast.protocol import SnapcastProtocol
 
 
 _LOGGER = logging.getLogger(__name__)
@@ -185,19 +187,44 @@ class Snapclient(object):
 
 class Snapserver(object):
     """ Represents a snapserver. """
-    def __init__(self, host, port=CONTROL_PORT):
-        self._conn = telnetlib.Telnet(host, port)
+    def __init__(self, loop, host, port=CONTROL_PORT):
+        self._loop = loop
+        self._callbacks = {
+            CLIENT_ONCONNECT: self._on_client_connect,
+            CLIENT_ONDISCONNECT: self._on_client_disconnect,
+            CLIENT_ONVOLUMECHANGED: self._on_client_volume_changed,
+            CLIENT_ONNAMECHANGED: self._on_client_name_changed,
+            CLIENT_ONLATENCYCHANGED: self._on_client_latency_changed,
+            GROUP_ONMUTE: self._on_group_mute,
+            GROUP_ONSTREAMCHANGED: self._on_group_stream_changed,
+            STREAM_ONUPDATE: self._on_stream_update,
+            SERVER_ONUPDATE: self._on_server_update
+        }
+        coro = self._loop.create_connection(lambda: SnapcastProtocol(self._loop, self._callbacks), host, port)
+        _, self._protocol = self._loop.run_until_complete(coro)
+        #_, self._protocol = self._loop.run_in_executor(coro)
+        #self._protocol = yield from coro
+
+        #self._conn = telnetlib.Telnet(host, port)
         _LOGGER.info('connected to snapserver on %s:%s', host, port)
         self._host = host
         self._clients = {}
         self._streams = {}
         self._groups = {}
         self._buffer = {}
-        self._queue = queue.Queue()
-        tcp = threading.Thread(target=self._read)
-        tcp.setDaemon(True) #python2.7
-        tcp.start()
+        #self._queue = queue.Queue()
+        #tcp = threading.Thread(target=self._read)
+        #tcp.setDaemon(True) #python2.7
+        #tcp.start()
         self.synchronize(self.status())
+
+    def _transact(self, method, params=None):
+        print('in transact')
+        z = self._loop.run_until_complete(self._protocol.request(method, params))
+        #z = self._loop.run_in_executor(self._protocol.request(method, params))
+        #z = yield from self._protocol.request(method, params)
+        print('result', z)
+        return z
 
     @property
     def clients(self):
@@ -414,8 +441,9 @@ class Snapserver(object):
             if group.stream == data.get('id'):
                 group._callback(True)
 
+    """ Transact via JSON RPC TCP. """
+    """
     def _transact(self, method, params=None):
-        """ Transact via JSON RPC TCP. """
         if method not in _METHODS:
             raise ValueError('Invalid JSON RPC method')
         _LOGGER.debug('sending request %s', method)
@@ -433,6 +461,7 @@ class Snapserver(object):
             if uid in self._buffer.keys():
                 return self._buffer.get(uid)
         raise Exception('No response received')
+    """
 
     def __repr__(self):
         """ String representation. """
