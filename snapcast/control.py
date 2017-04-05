@@ -60,6 +60,7 @@ class Snapclient(object):
     def __init__(self, server, data):
         self._server = server
         self._last_seen = None
+        self._callback_func = None
         self._client = data
 
     @property
@@ -272,6 +273,10 @@ class Snapserver(object):
         """ Get a stream. """
         return self._streams[stream_identifier]
 
+    def client(self, client_identifier):
+        """ Get a client. """
+        return self._clients[client_identifier]
+
     def synchronize(self, status):
         """ Synchronize snapserver. """
         self._version = status.get('server').get('version')
@@ -472,6 +477,7 @@ class Snapgroup(object):
     """ Represents a snapcast group. """
     def __init__(self, server, data):
         self._server = server
+        self._callback_func = None
         self.update(data)
 
     def update(self, data):
