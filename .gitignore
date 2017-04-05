@@ -3,3 +3,4 @@ snapcast.egg-info*
 .cache
 .coverage
 .tox
+MANIFEST
