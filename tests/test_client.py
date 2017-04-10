@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import Mock
 from helpers.mock_snapcast import MockServer
-from snapcast.control import Snapclient
+from snapcast.control.client import Snapclient
 
 
 class TestSnapclient(unittest.TestCase):

@@ -1,5 +1,5 @@
 import unittest
-from snapcast.control import Snapstream
+from snapcast.control.stream import Snapstream
 
 
 class TestSnapstream(unittest.TestCase):

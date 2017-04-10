@@ -1,12 +1,15 @@
+import asyncio
 import unittest
-from helpers.mock_telnet import MockTelnet
-from snapcast.control import Snapserver
+#from helpers.mock_telnet import MockTelnet
+from snapcast.control import create_server
 
 
 class TestSnapserver(unittest.TestCase):
 
     def setUp(self):
-        self.server = Snapserver('0.0.0.0')
+        self.loop = asyncio.get_event_loop()
+        self.server = yield from create_server(self.loop, '0.0.0.0')
+        self.loop.run_forever()
 
     def test_init(self):
         self.assertEqual(self.server.version, 0.11)

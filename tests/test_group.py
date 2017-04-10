@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import Mock
 from helpers.mock_snapcast import MockServer
-from snapcast.control import Snapgroup
+from snapcast.control.group import Snapgroup
 
 
 class TestSnapgroup(unittest.TestCase):
