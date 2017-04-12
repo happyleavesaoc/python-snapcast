@@ -101,7 +101,7 @@ class Snapserver(object):
     def delete_client(self, identifier):
         """Delete client."""
         params = {'id': identifier}
-        response = self._transact(SERVER_DELETECLIENT, params)
+        response = yield from self._transact(SERVER_DELETECLIENT, params)
         self.synchronize(response)
 
     def client_name(self, identifier, name):
