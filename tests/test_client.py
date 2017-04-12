@@ -1,6 +1,7 @@
 import unittest
-from unittest.mock import Mock
-from helpers.mock_snapcast import MockServer
+from unittest.mock import MagicMock
+from helpers import async_run
+
 from snapcast.control.client import Snapclient
 
 
@@ -26,7 +27,8 @@ class TestSnapclient(unittest.TestCase):
             },
             'connected': True
         }
-        self.client = Snapclient(MockServer(), data)
+        server = MagicMock()
+        self.client = Snapclient(server, data)
 
     def test_init(self):
         self.assertEqual(self.client.identifier, 'test')
@@ -39,19 +41,19 @@ class TestSnapclient(unittest.TestCase):
         self.assertEqual(self.client.muted, False)
 
     def test_set_volume(self):
-        self.client.volume = 100
+        async_run(self.client.set_volume(100))
         self.assertEqual(self.client.volume, 100)
 
     def test_set_name(self):
-        self.client.name = 'test'
+        async_run(self.client.set_name('test'))
         self.assertEqual(self.client.name, 'test')
 
     def test_set_latency(self):
-        self.client.latency = 1
+        async_run(self.client.set_latency(1))
         self.assertEqual(self.client.latency, 1)
 
     def test_set_muted(self):
-        self.client.muted = True
+        async_run(self.client.set_muted(True))
         self.assertEqual(self.client.muted, True)
 
     def test_update_volume(self):
@@ -72,7 +74,7 @@ class TestSnapclient(unittest.TestCase):
         self.assertEqual(self.client.connected, False)
 
     def test_set_callback(self):
-        cb = Mock()
+        cb = MagicMock()
         self.client.set_callback(cb)
         self.client.update_connected(False)
         self.assertTrue(cb.called)

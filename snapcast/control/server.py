@@ -1,5 +1,6 @@
 """Snapcast server."""
 
+import asyncio
 import logging
 from snapcast.control.protocol import SnapcastProtocol
 from snapcast.control.client import Snapclient
@@ -79,6 +80,7 @@ class Snapserver(object):
         status = yield from self.status()
         self.synchronize(status)
 
+    @asyncio.coroutine
     def _transact(self, method, params=None):
         """Wrap requests."""
         result = yield from self._protocol.request(method, params)

@@ -1,6 +1,7 @@
 import unittest
-from unittest.mock import Mock
-from helpers.mock_snapcast import MockServer
+from unittest.mock import MagicMock
+from helpers import async_run
+
 from snapcast.control.group import Snapgroup
 
 
@@ -17,7 +18,14 @@ class TestSnapgroup(unittest.TestCase):
                 {'id': 'b'}
             ]
         }
-        self.group = Snapgroup(MockServer(), data)
+        server = MagicMock()
+        stream = MagicMock()
+        stream.friendly_name = 'test stream'
+        stream.status = 'playing'
+        server.streams = [stream]
+        server.stream = MagicMock(return_value=stream)
+        self.group = Snapgroup(server, data)
+
 
     def test_init(self):
         self.assertEqual(self.group.identifier, 'test')
@@ -35,8 +43,12 @@ class TestSnapgroup(unittest.TestCase):
         self.assertEqual(self.group.stream, 'other stream')
 
     def test_set_muted(self):
-        self.group.muted = True
+        async_run(self.group.set_muted(True))
         self.assertEqual(self.group.muted, True)
+
+    def test_set_stream(self):
+        async_run(self.group.set_stream('new stream'))
+        self.assertEqual(self.group.stream, 'new stream')
 
     def test_add_client(self):
         self.group.add_client('c')
@@ -58,7 +70,7 @@ class TestSnapgroup(unittest.TestCase):
         self.assertEqual(self.group.stream, 'other stream')
 
     def test_set_callback(self):
-        cb = Mock()
+        cb = MagicMock()
         self.group.set_callback(cb)
         self.group.update_mute({'mute': True})
         self.assertTrue(cb.called)

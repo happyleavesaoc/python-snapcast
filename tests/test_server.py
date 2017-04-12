@@ -1,11 +1,11 @@
 import asyncio
-import asynctest
+import copy
 import unittest
 from unittest import mock
-from unittest.mock import Mock
-#from helpers.mock_telnet import MockTelnet
-from snapcast.control import create_server
+from helpers import AsyncMock
+
 from snapcast.control.server import Snapserver
+from snapcast.control import create_server
 
 
 return_values = {
@@ -56,27 +56,13 @@ return_values = {
             ]
         }
     },
-    'Server.DeleteClient': {
-        'server': {
-            'groups': [
-              {
-                  'clients': []
-              }
-          ],
-          'streams': [
-          ]
-       }
-    },
     'Client.SetName': {
         'name': 'test name'
     },
     'Server.GetRPCVersion': {
         'major': 2,
         'minor': 0,
-        'patch': 0
-    },
-    'Client.SetName': {
-        'name': 'new name'
+        'patch': 1
     },
     'Client.SetLatency': {
         'latency': 50
@@ -87,10 +73,16 @@ return_values = {
             'muted': True
         }
     },
-    'Client.GetStatus': {
-        'client': {
-            'config': {}
-        }
+    'Server.DeleteClient': {
+        'server': {
+            'groups': [
+              {
+                  'clients': []
+              }
+          ],
+          'streams': [
+          ]
+       }
     },
     'Group.GetStatus': {
         'group': {
@@ -108,25 +100,21 @@ return_values = {
     }
 }
 
-def get_mock_coro(return_value):
-    @asyncio.coroutine
-    def mock_coro(*args, **kwargs):
-        return return_value
-    return mock_coro()
+
+def mock_transact(key):
+    return AsyncMock(return_value=return_values[key])
+
 
 class TestSnapserver(unittest.TestCase):
 
-    #@mock.patch.object(Snapserver, '_transact', return_value=return_values['Server.GetStatus'])
+    def _run(self, coro):
+        return self.loop.run_until_complete(coro)
+
+    @mock.patch.object(Snapserver, 'start', new=AsyncMock())
     def setUp(self):
         self.loop = asyncio.get_event_loop()
-        #self.server = get_server(self.loop)
-        #with mock.patch.object(Snapserver, '_transact', return_value=get_mock_coro(return_values['Server.GetStatus'])):
-        coro = create_server(self.loop, '0.0.0.0')
-        self.server = self.loop.run_until_complete(coro)
-
-    def tearDown(self):
-        pass
-        #self.loop.close()
+        self.server = self._run(create_server(self.loop, 'abcd'))
+        self.server.synchronize(return_values.get('Server.GetStatus'))
 
     def test_init(self):
         self.assertEqual(self.server.version, 0.11)
@@ -137,80 +125,67 @@ class TestSnapserver(unittest.TestCase):
         self.assertEqual(self.server.stream('stream').identifier, 'stream')
         self.assertEqual(self.server.client('test').identifier, 'test')
 
+    @mock.patch.object(Snapserver, '_transact', new=mock_transact('Server.GetStatus'))
     def test_status(self):
-        print('hello')
-        status = yield from self.server.status()
-        print('my status', status)
+        status = self._run(self.server.status())
         self.assertEqual(status.get('server').get('version'), 0.11)
 
+    @mock.patch.object(Snapserver, '_transact', new=mock_transact('Server.GetRPCVersion'))
     def test_rpc_version(self):
-        version = yield from self.server.rpc_version()
-        self.assertEqual(version, {'major': 2, 'minor': 0, 'patch': 0})
+        version = self._run(self.server.rpc_version())
+        self.assertEqual(version, {'major': 2, 'minor': 0, 'patch': 1})
 
+    @mock.patch.object(Snapserver, '_transact', new=mock_transact('Client.SetName'))
     def test_client_name(self):
-        name = yield from self.server.client_name('test', 'test name')
+        name = self._run(self.server.client_name('test', 'test name'))
         self.assertEqual(name, 'test name')
 
-    def test_client_set_invalid(self):
-        yield from self.server.client_name('efgh', 'test name')
-        # TODO: add assert
-
-    @mock.patch.object(Snapserver, '_transact', return_value=return_values['Server.DeleteClient'])
-    def test_delete_client(self, transact):
-        yield from self.server.delete_client('test')
-        self.assertEqual(len(self.server.clients), 0)
-
-    def test_client_name(self):
-        result = yield from self.server.client_name('test', 'new name')
-        self.assertEqual(result, 'new name')
-
+    @mock.patch.object(Snapserver, '_transact', new=mock_transact('Client.SetLatency'))
     def test_client_latency(self):
-        result = yield from self.server.client_latency('test', 50)
-        print("LASTENCY", result)
+        result = self._run(self.server.client_latency('test', 50))
         self.assertEqual(result, 50)
 
+    @mock.patch.object(Snapserver, '_transact', new=mock_transact('Client.SetVolume'))
     def test_client_volume(self):
         vol = {'percent': 50, 'muted': True}
-        result = yield from self.server.client_volume('test', vol)
+        result = self._run(self.server.client_volume('test', vol))
         self.assertEqual(result, vol)
 
-    def test_client_status(self):
-        result = yield from self.server.client_status('test')
-        self.assertEqual(result, {'config': {}})
+    @mock.patch.object(Snapserver, '_transact', new=mock_transact('Server.DeleteClient'))
+    def test_delete_client(self):
+        self._run(self.server.delete_client('test'))
+        self.assertEqual(len(self.server.clients), 0)
 
+    @mock.patch.object(Snapserver, '_transact', new=mock_transact('Group.GetStatus'))
     def test_group_status(self):
-        result = yield from self.server.group_status('test')
+        result = self._run(self.server.group_status('test'))
         self.assertEqual(result, {'clients': []})
 
+    @mock.patch.object(Snapserver, '_transact', new=mock_transact('Group.SetMute'))
     def test_group_mute(self):
-        result = yield from self.server.group_mute('test', True)
+        result = self._run(self.server.group_mute('test', True))
         self.assertEqual(result, True)
 
+    @mock.patch.object(Snapserver, '_transact', new=mock_transact('Group.SetStream'))
     def test_group_stream(self):
-        result = yield from self.server.group_stream('test', 'stream')
+        result = self._run(self.server.group_stream('test', 'stream'))
         self.assertEqual(result, 'stream')
 
+    @mock.patch.object(Snapserver, '_transact', new=mock_transact('Group.SetClients'))
     def test_group_clients(self):
-        result = yield from self.server.group_clients('test', ['test'])
+        result = self._run(self.server.group_clients('test', ['test']))
         self.assertEqual(result, ['test'])
 
     def test_synchronize(self):
-        status = yield from self.server.status()
+        status = copy.deepcopy(return_values.get('Server.GetStatus'))
         status['server']['version'] = '0.12'
         self.server.synchronize(status)
         self.assertEqual(self.server.version, '0.12')
-        print(self.server.version)
-
-    """
-    def test_invalid_event(self):
-        with self.assertRaises(ValueError):
-            self.server._on_event({'method': 'bad'})
-    """
 
     def test_on_server_update(self):
-        status = yield from self.server.status()
+        status = copy.deepcopy(return_values.get('Server.GetStatus'))
         status['server']['version'] = '0.12'
-        yield from self.server._on_server_update(status)
+        self.server._on_server_update(status)
         self.assertEqual(self.server.version, '0.12')
 
     def test_on_group_mute(self):
@@ -218,7 +193,7 @@ class TestSnapserver(unittest.TestCase):
             'id': 'test',
             'mute': True
         }
-        yield from self.server._on_group_mute(data)
+        self.server._on_group_mute(data)
         self.assertEqual(self.server.group('test').muted, True)
 
     def test_on_group_stream_changed(self):
@@ -226,7 +201,7 @@ class TestSnapserver(unittest.TestCase):
             'id': 'test',
             'stream_id': 'other'
         }
-        yield from self.server._on_group_stream_changed(data)
+        self.server._on_group_stream_changed(data)
         self.assertEqual(self.server.group('test').stream, 'other')
 
     def test_on_client_connect(self):
@@ -243,14 +218,14 @@ class TestSnapserver(unittest.TestCase):
                 }
             }
         }
-        yield from self.server._on_client_connect(data)
+        self.server._on_client_connect(data)
         self.assertEqual(self.server.client('new').connected, True)
 
     def test_on_client_disconnect(self):
         data = {
             'id': 'test'
         }
-        yield from self.server._on_client_disconnect(data)
+        self.server._on_client_disconnect(data)
         self.assertEqual(self.server.client('test').connected, False)
 
     def test_on_client_volume_changed(self):
@@ -261,7 +236,7 @@ class TestSnapserver(unittest.TestCase):
                 'muted': True
             }
         }
-        yield from self.server._on_client_volume_changed(data)
+        self.server._on_client_volume_changed(data)
         self.assertEqual(self.server.client('test').volume, 50)
         self.assertEqual(self.server.client('test').muted, True)
 
@@ -270,7 +245,7 @@ class TestSnapserver(unittest.TestCase):
             'id': 'test',
             'name': 'new'
         }
-        yield from self.server._on_client_name_changed(data)
+        self.server._on_client_name_changed(data)
         self.assertEqual(self.server.client('test').name, 'new')
 
     def test_on_client_latency_changed(self):
@@ -278,7 +253,7 @@ class TestSnapserver(unittest.TestCase):
             'id': 'test',
             'latency': 50
         }
-        yield from self.server._on_client_latency_changed(data)
+        self.server._on_client_latency_changed(data)
         self.assertEqual(self.server.client('test').latency, 50)
 
     def test_on_stream_update(self):
@@ -295,5 +270,4 @@ class TestSnapserver(unittest.TestCase):
             }
         }
         self.server._on_stream_update(data)
-        print(self.server.stream('stream').status, 'idle')
         self.assertEqual(self.server.stream('stream').status, 'idle')
