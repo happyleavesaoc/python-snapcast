@@ -22,8 +22,11 @@ class TestSnapgroup(unittest.TestCase):
         stream = MagicMock()
         stream.friendly_name = 'test stream'
         stream.status = 'playing'
+        client = MagicMock()
+        client.volume = 50
         server.streams = [stream]
         server.stream = MagicMock(return_value=stream)
+        server.client = MagicMock(return_value=client)
         self.group = Snapgroup(server, data)
 
 
@@ -33,6 +36,7 @@ class TestSnapgroup(unittest.TestCase):
         self.assertEqual(self.group.friendly_name, 'test stream')
         self.assertEqual(self.group.stream, 'test stream')
         self.assertEqual(self.group.muted, False)
+        self.assertEqual(self.group.volume, 50)
         self.assertEqual(self.group.clients, ['a', 'b'])
         self.assertEqual(self.group.stream_status, 'playing')
 
@@ -45,6 +49,9 @@ class TestSnapgroup(unittest.TestCase):
     def test_set_muted(self):
         async_run(self.group.set_muted(True))
         self.assertEqual(self.group.muted, True)
+
+    def test_set_volume(self):
+        async_run(self.group.set_volume(75))
 
     def test_set_stream(self):
         async_run(self.group.set_stream('new stream'))

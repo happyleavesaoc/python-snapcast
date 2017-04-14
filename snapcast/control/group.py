@@ -57,6 +57,31 @@ class Snapgroup(object):
         _LOGGER.info('set muted to %s on %s', status, self.friendly_name)
 
     @property
+    def volume(self):
+        """Get volume."""
+        volume_sum = 0
+        for client in self._group.get('clients'):
+            volume_sum += self._server.client(client.get('id')).volume
+        return int(volume_sum / len(self._group.get('clients')))
+
+    def set_volume(self, volume):
+        """Set volume."""
+        volume_sum = 0
+        for data in self._group.get('clients'):
+            volume_sum += self._server.client(data.get('id')).volume
+        avg_volume = int(volume_sum / len(self._group.get('clients')))
+        for data in self._group.get('clients'):
+            client = self._server.client(data.get('id'))
+            yield from client.set_volume(volume)
+            client.update_volume({
+                'volume': {
+                    'percent': volume,
+                    'muted': client.muted
+                }
+            })
+        _LOGGER.info('set volume to %s on clients in %s', avg_volume, self.friendly_name)
+
+    @property
     def friendly_name(self):
         """Get friendly name."""
         return self.name if self.name != '' else self.stream

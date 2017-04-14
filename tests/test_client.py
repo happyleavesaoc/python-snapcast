@@ -1,4 +1,5 @@
 import unittest
+from unittest import mock
 from unittest.mock import MagicMock
 from helpers import async_run
 
@@ -27,9 +28,12 @@ class TestSnapclient(unittest.TestCase):
             },
             'connected': True
         }
+        #group = MagicMock()
         server = MagicMock()
+        #server.group = group
         self.client = Snapclient(server, data)
 
+    @mock.patch.object(Snapclient, 'group', new=1)
     def test_init(self):
         self.assertEqual(self.client.identifier, 'test')
         self.assertEqual(self.client.friendly_name, 'localhost')
@@ -39,8 +43,10 @@ class TestSnapclient(unittest.TestCase):
         self.assertEqual(self.client.latency, 0)
         self.assertEqual(self.client.volume, 90)
         self.assertEqual(self.client.muted, False)
+        self.assertEqual(self.client.group, 1)
 
-    def test_set_volume(self):
+    @mock.patch.object(Snapclient, 'group')
+    def test_set_volume(self, mock):
         async_run(self.client.set_volume(100))
         self.assertEqual(self.client.volume, 100)
 
@@ -56,7 +62,8 @@ class TestSnapclient(unittest.TestCase):
         async_run(self.client.set_muted(True))
         self.assertEqual(self.client.muted, True)
 
-    def test_update_volume(self):
+    @mock.patch.object(Snapclient, 'group')
+    def test_update_volume(self, mock):
         self.client.update_volume({'volume': {'percent': 50, 'muted': True}})
         self.assertEqual(self.client.volume, 50)
         self.assertEqual(self.client.muted, True)

@@ -93,12 +93,14 @@ class Snapclient(object):
         new_volume['percent'] = percent
         self._client['config']['volume']['percent'] = percent
         yield from self._server.client_volume(self.identifier, new_volume)
+        self._server.group(self.group.identifier).callback()
         _LOGGER.info('set volume to %s on %s', percent, self.friendly_name)
 
     def update_volume(self, data):
         """Update volume."""
         self._client['config']['volume'] = data['volume']
         _LOGGER.info('updated volume on %s', self.friendly_name)
+        self._server.group(self.group.identifier).callback()
         self.callback()
 
     def update_name(self, data):
