@@ -84,4 +84,4 @@ class TestSnapclient(unittest.TestCase):
         cb = MagicMock()
         self.client.set_callback(cb)
         self.client.update_connected(False)
-        self.assertTrue(cb.called)
+        cb.assert_called_with(self.client)

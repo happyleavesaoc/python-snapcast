@@ -80,4 +80,4 @@ class TestSnapgroup(unittest.TestCase):
         cb = MagicMock()
         self.group.set_callback(cb)
         self.group.update_mute({'mute': True})
-        self.assertTrue(cb.called)
+        cb.assert_called_with(self.group)
