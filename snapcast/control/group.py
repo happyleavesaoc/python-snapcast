@@ -131,7 +131,7 @@ class Snapgroup(object):
     def callback(self):
         """Run callback."""
         if self._callback_func and callable(self._callback_func):
-            self._callback_func()
+            self._callback_func(self)
 
     def set_callback(self, func):
         """Set callback."""
