@@ -205,6 +205,8 @@ class TestSnapserver(unittest.TestCase):
         self.assertEqual(self.server.group('test').stream, 'other')
 
     def test_on_client_connect(self):
+        cb = mock.MagicMock()
+        self.server.set_new_client_callback(cb)
         data = {
             'id': 'new',
             'client': {
@@ -220,6 +222,7 @@ class TestSnapserver(unittest.TestCase):
         }
         self.server._on_client_connect(data)
         self.assertEqual(self.server.client('new').connected, True)
+        cb.assert_called_with(self.server.client('new'))
 
     def test_on_client_disconnect(self):
         data = {
