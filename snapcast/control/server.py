@@ -71,6 +71,7 @@ class Snapserver(object):
             STREAM_ONUPDATE: self._on_stream_update,
             SERVER_ONUPDATE: self._on_server_update
         }
+        self._new_client_callback_func = None
 
     def start(self):
         """Initiate server connection."""
@@ -203,11 +204,16 @@ class Snapserver(object):
 
     def _on_client_connect(self, data):
         """Handle client connect."""
+        client = None
         if data.get('id') in self._clients:
-            self._clients[data.get('id')].update_connected(True)
+            client = self._clients[data.get('id')]
+            client.update_connected(True)
         else:
-            self._clients[data.get('id')] = Snapclient(self, data.get('client'))
-        _LOGGER.info('client %s connected', self._clients[data.get('id')].friendly_name)
+            client = Snapclient(self, data.get('client'))
+            self._clients[data.get('id')] = client
+            if self._new_client_callback_func and callable(self._new_client_callback_func):
+                self._new_client_callback_func(client)
+        _LOGGER.info('client %s connected', client.friendly_name)
 
     def _on_client_disconnect(self, data):
         """Handle client disconnect."""
@@ -233,6 +239,10 @@ class Snapserver(object):
         for group in self._groups.values():
             if group.stream == data.get('id'):
                 group.callback()
+
+    def set_new_client_callback(self, func):
+        """Set new client callback function."""
+        self._new_client_callback_func = func
 
     def __repr__(self):
         """String representation."""
