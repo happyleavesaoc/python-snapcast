@@ -15,6 +15,8 @@ CONTROL_PORT = 1705
 SERVER_GETSTATUS = 'Server.GetStatus'
 SERVER_GETRPCVERSION = 'Server.GetRPCVersion'
 SERVER_DELETECLIENT = 'Server.DeleteClient'
+SERVER_ONCONNECT = 'Server.OnConnect'
+SERVER_ONDISCONNECT = 'Server.OnDisconnect'
 SERVER_ONUPDATE = 'Server.OnUpdate'
 
 CLIENT_GETSTATUS = 'Client.GetStatus'
@@ -69,8 +71,12 @@ class Snapserver(object):
             GROUP_ONMUTE: self._on_group_mute,
             GROUP_ONSTREAMCHANGED: self._on_group_stream_changed,
             STREAM_ONUPDATE: self._on_stream_update,
+            SERVER_ONCONNECT: self._on_server_connect,
+            SERVER_ONDISCONNECT: self._on_server_disconnect,
             SERVER_ONUPDATE: self._on_server_update
         }
+        self._on_connect_callback_func = None
+        self._on_disconnect_callback_func = None
         self._new_client_callback_func = None
 
     def start(self):
@@ -190,6 +196,16 @@ class Snapserver(object):
         result = yield from self._transact(method, params)
         return result.get(key)
 
+    def _on_server_connect(self):
+        """Handle server connection."""
+        if self._on_connect_callback_func and callable(self._on_connect_callback_func):
+            self._on_connect_callback_func()
+
+    def _on_server_disconnect(self, exception):
+        """Handle server disconnection."""
+        if self._on_disconnect_callback_func and callable(self._on_disconnect_callback_func):
+            self._on_disconnect_callback_func(exception)
+
     def _on_server_update(self, data):
         """Handle server update."""
         self.synchronize(data)
@@ -239,6 +255,14 @@ class Snapserver(object):
         for group in self._groups.values():
             if group.stream == data.get('id'):
                 group.callback()
+
+    def set_on_connect_callback(self, func):
+        """Set on connection callback function."""
+        self._on_connect_callback_func = func
+
+    def set_on_disconnect_callback(self, func):
+        """Set on disconnection callback function."""
+        self._on_disconnect_callback_func = func
 
     def set_new_client_callback(self, func):
         """Set new client callback function."""

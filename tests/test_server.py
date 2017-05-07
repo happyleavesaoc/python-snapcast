@@ -182,6 +182,19 @@ class TestSnapserver(unittest.TestCase):
         self.server.synchronize(status)
         self.assertEqual(self.server.version, '0.12')
 
+    def test_on_server_connect(self):
+        cb = mock.MagicMock()
+        self.server.set_on_connect_callback(cb)
+        self.server._on_server_connect()
+        cb.assert_called()
+
+    def test_on_server_disconnect(self):
+        cb = mock.MagicMock()
+        self.server.set_on_disconnect_callback(cb)
+        e = Exception()
+        self.server._on_server_disconnect(e)
+        cb.assert_called_with(e)
+
     def test_on_server_update(self):
         status = copy.deepcopy(return_values.get('Server.GetStatus'))
         status['server']['version'] = '0.12'
