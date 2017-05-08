@@ -46,6 +46,7 @@ _METHODS = [SERVER_GETSTATUS, SERVER_GETRPCVERSION, SERVER_DELETECLIENT,
             GROUP_GETSTATUS, GROUP_SETMUTE, GROUP_SETSTREAM, GROUP_SETCLIENTS]
 
 
+# pylint: disable=too-many-public-methods
 class Snapserver(object):
     """Represents a snapserver."""
 
