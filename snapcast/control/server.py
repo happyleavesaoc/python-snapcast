@@ -2,7 +2,7 @@
 
 import asyncio
 import logging
-from snapcast.control.protocol import SnapcastProtocol
+from snapcast.control.protocol import SnapcastProtocol, SERVER_ONCONNECT, SERVER_ONDISCONNECT
 from snapcast.control.client import Snapclient
 from snapcast.control.group import Snapgroup
 from snapcast.control.stream import Snapstream
@@ -15,8 +15,6 @@ CONTROL_PORT = 1705
 SERVER_GETSTATUS = 'Server.GetStatus'
 SERVER_GETRPCVERSION = 'Server.GetRPCVersion'
 SERVER_DELETECLIENT = 'Server.DeleteClient'
-SERVER_ONCONNECT = 'Server.OnConnect'
-SERVER_ONDISCONNECT = 'Server.OnDisconnect'
 SERVER_ONUPDATE = 'Server.OnUpdate'
 
 CLIENT_GETSTATUS = 'Client.GetStatus'
