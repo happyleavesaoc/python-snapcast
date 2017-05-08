@@ -7,6 +7,7 @@ import random
 SERVER_ONCONNECT = 'Server.OnConnect'
 SERVER_ONDISCONNECT = 'Server.OnDisconnect'
 
+
 def jsonrpc_request(method, identifier, params=None):
     """Produce a JSONRPC request."""
     return '{}\r\n'.format(json.dumps({

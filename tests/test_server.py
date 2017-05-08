@@ -186,7 +186,7 @@ class TestSnapserver(unittest.TestCase):
         cb = mock.MagicMock()
         self.server.set_on_connect_callback(cb)
         self.server._on_server_connect()
-        cb.assert_called()
+        cb.assert_called_with()
 
     def test_on_server_disconnect(self):
         cb = mock.MagicMock()
