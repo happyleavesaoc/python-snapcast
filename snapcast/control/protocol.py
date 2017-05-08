@@ -4,7 +4,6 @@ import asyncio
 import json
 import random
 
-SERVER_ONCONNECT = 'Server.OnConnect'
 SERVER_ONDISCONNECT = 'Server.OnDisconnect'
 
 
@@ -30,7 +29,6 @@ class SnapcastProtocol(asyncio.Protocol):
     def connection_made(self, transport):
         """When a connection is made."""
         self._transport = transport
-        self._callbacks.get(SERVER_ONCONNECT)()
 
     def connection_lost(self, exception):
         """When a connection is lost."""

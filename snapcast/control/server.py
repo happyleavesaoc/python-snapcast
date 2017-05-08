@@ -2,7 +2,7 @@
 
 import asyncio
 import logging
-from snapcast.control.protocol import SnapcastProtocol, SERVER_ONCONNECT, SERVER_ONDISCONNECT
+from snapcast.control.protocol import SnapcastProtocol, SERVER_ONDISCONNECT
 from snapcast.control.client import Snapclient
 from snapcast.control.group import Snapgroup
 from snapcast.control.stream import Snapstream
@@ -69,7 +69,6 @@ class Snapserver(object):
             GROUP_ONMUTE: self._on_group_mute,
             GROUP_ONSTREAMCHANGED: self._on_group_stream_changed,
             STREAM_ONUPDATE: self._on_stream_update,
-            SERVER_ONCONNECT: self._on_server_connect,
             SERVER_ONDISCONNECT: self._on_server_disconnect,
             SERVER_ONUPDATE: self._on_server_update
         }
@@ -84,6 +83,7 @@ class Snapserver(object):
         _LOGGER.info('connected to snapserver on %s:%s', self._host, self._port)
         status = yield from self.status()
         self.synchronize(status)
+        self._on_server_connect()
 
     @asyncio.coroutine
     def _transact(self, method, params=None):
