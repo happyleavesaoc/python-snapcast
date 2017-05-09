@@ -2,7 +2,7 @@
 
 import asyncio
 import logging
-from snapcast.control.protocol import SnapcastProtocol
+from snapcast.control.protocol import SnapcastProtocol, SERVER_ONDISCONNECT
 from snapcast.control.client import Snapclient
 from snapcast.control.group import Snapgroup
 from snapcast.control.stream import Snapstream
@@ -46,6 +46,7 @@ _METHODS = [SERVER_GETSTATUS, SERVER_GETRPCVERSION, SERVER_DELETECLIENT,
             GROUP_GETSTATUS, GROUP_SETMUTE, GROUP_SETSTREAM, GROUP_SETCLIENTS]
 
 
+# pylint: disable=too-many-public-methods
 class Snapserver(object):
     """Represents a snapserver."""
 
@@ -69,8 +70,12 @@ class Snapserver(object):
             GROUP_ONMUTE: self._on_group_mute,
             GROUP_ONSTREAMCHANGED: self._on_group_stream_changed,
             STREAM_ONUPDATE: self._on_stream_update,
+            SERVER_ONDISCONNECT: self._on_server_disconnect,
             SERVER_ONUPDATE: self._on_server_update
         }
+        self._on_connect_callback_func = None
+        self._on_disconnect_callback_func = None
+        self._new_client_callback_func = None
 
     def start(self):
         """Initiate server connection."""
@@ -79,6 +84,7 @@ class Snapserver(object):
         _LOGGER.info('connected to snapserver on %s:%s', self._host, self._port)
         status = yield from self.status()
         self.synchronize(status)
+        self._on_server_connect()
 
     @asyncio.coroutine
     def _transact(self, method, params=None):
@@ -189,6 +195,16 @@ class Snapserver(object):
         result = yield from self._transact(method, params)
         return result.get(key)
 
+    def _on_server_connect(self):
+        """Handle server connection."""
+        if self._on_connect_callback_func and callable(self._on_connect_callback_func):
+            self._on_connect_callback_func()
+
+    def _on_server_disconnect(self, exception):
+        """Handle server disconnection."""
+        if self._on_disconnect_callback_func and callable(self._on_disconnect_callback_func):
+            self._on_disconnect_callback_func(exception)
+
     def _on_server_update(self, data):
         """Handle server update."""
         self.synchronize(data)
@@ -203,11 +219,16 @@ class Snapserver(object):
 
     def _on_client_connect(self, data):
         """Handle client connect."""
+        client = None
         if data.get('id') in self._clients:
-            self._clients[data.get('id')].update_connected(True)
+            client = self._clients[data.get('id')]
+            client.update_connected(True)
         else:
-            self._clients[data.get('id')] = Snapclient(self, data.get('client'))
-        _LOGGER.info('client %s connected', self._clients[data.get('id')].friendly_name)
+            client = Snapclient(self, data.get('client'))
+            self._clients[data.get('id')] = client
+            if self._new_client_callback_func and callable(self._new_client_callback_func):
+                self._new_client_callback_func(client)
+        _LOGGER.info('client %s connected', client.friendly_name)
 
     def _on_client_disconnect(self, data):
         """Handle client disconnect."""
@@ -233,6 +254,18 @@ class Snapserver(object):
         for group in self._groups.values():
             if group.stream == data.get('id'):
                 group.callback()
+
+    def set_on_connect_callback(self, func):
+        """Set on connection callback function."""
+        self._on_connect_callback_func = func
+
+    def set_on_disconnect_callback(self, func):
+        """Set on disconnection callback function."""
+        self._on_disconnect_callback_func = func
+
+    def set_new_client_callback(self, func):
+        """Set new client callback function."""
+        self._new_client_callback_func = func
 
     def __repr__(self):
         """String representation."""

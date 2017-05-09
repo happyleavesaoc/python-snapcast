@@ -182,6 +182,19 @@ class TestSnapserver(unittest.TestCase):
         self.server.synchronize(status)
         self.assertEqual(self.server.version, '0.12')
 
+    def test_on_server_connect(self):
+        cb = mock.MagicMock()
+        self.server.set_on_connect_callback(cb)
+        self.server._on_server_connect()
+        cb.assert_called_with()
+
+    def test_on_server_disconnect(self):
+        cb = mock.MagicMock()
+        self.server.set_on_disconnect_callback(cb)
+        e = Exception()
+        self.server._on_server_disconnect(e)
+        cb.assert_called_with(e)
+
     def test_on_server_update(self):
         status = copy.deepcopy(return_values.get('Server.GetStatus'))
         status['server']['version'] = '0.12'
@@ -205,6 +218,8 @@ class TestSnapserver(unittest.TestCase):
         self.assertEqual(self.server.group('test').stream, 'other')
 
     def test_on_client_connect(self):
+        cb = mock.MagicMock()
+        self.server.set_new_client_callback(cb)
         data = {
             'id': 'new',
             'client': {
@@ -220,6 +235,7 @@ class TestSnapserver(unittest.TestCase):
         }
         self.server._on_client_connect(data)
         self.assertEqual(self.server.client('new').connected, True)
+        cb.assert_called_with(self.server.client('new'))
 
     def test_on_client_disconnect(self):
         data = {
