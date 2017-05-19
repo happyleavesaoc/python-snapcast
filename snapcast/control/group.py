@@ -68,20 +68,16 @@ class Snapgroup(object):
 
     def set_volume(self, volume):
         """Set volume."""
-        volume_sum = 0
-        for data in self._group.get('clients'):
-            volume_sum += self._server.client(data.get('id')).volume
-        avg_volume = int(volume_sum / len(self._group.get('clients')))
         for data in self._group.get('clients'):
             client = self._server.client(data.get('id'))
-            yield from client.set_volume(volume)
+            yield from client.set_volume(volume, update_group=False)
             client.update_volume({
                 'volume': {
                     'percent': volume,
                     'muted': client.muted
                 }
             })
-        _LOGGER.info('set volume to %s on clients in %s', avg_volume, self.friendly_name)
+        _LOGGER.info('set volume to %s on clients in %s', volume, self.friendly_name)
 
     @property
     def friendly_name(self):
@@ -144,7 +140,7 @@ class Snapgroup(object):
         if not self._snapshot:
             return
         yield from self.set_muted(self._snapshot['muted'])
-        yield from self.set_volume(self._snapshot['muted'])
+        yield from self.set_volume(self._snapshot['volume'])
         yield from self.set_stream(self._snapshot['stream'])
         _LOGGER.info('restored snapshot of state of %s', self.friendly_name)
 

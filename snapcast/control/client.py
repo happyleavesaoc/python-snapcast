@@ -87,7 +87,7 @@ class Snapclient(object):
         """Volume percent."""
         return self._client.get('config').get('volume').get('percent')
 
-    def set_volume(self, percent):
+    def set_volume(self, percent, update_group=True):
         """Set client volume percent."""
         if percent not in range(0, 101):
             raise ValueError('Volume percent out of range')
@@ -95,7 +95,8 @@ class Snapclient(object):
         new_volume['percent'] = percent
         self._client['config']['volume']['percent'] = percent
         yield from self._server.client_volume(self.identifier, new_volume)
-        self._server.group(self.group.identifier).callback()
+        if update_group:
+            self._server.group(self.group.identifier).callback()
         _LOGGER.info('set volume to %s on %s', percent, self.friendly_name)
 
     def update_volume(self, data):
