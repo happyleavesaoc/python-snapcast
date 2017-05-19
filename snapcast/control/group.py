@@ -142,6 +142,7 @@ class Snapgroup(object):
         yield from self.set_muted(self._snapshot['muted'])
         yield from self.set_volume(self._snapshot['volume'])
         yield from self.set_stream(self._snapshot['stream'])
+        self.callback()
         _LOGGER.info('restored snapshot of state of %s', self.friendly_name)
 
     def callback(self):
