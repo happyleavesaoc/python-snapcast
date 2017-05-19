@@ -76,6 +76,14 @@ class TestSnapgroup(unittest.TestCase):
         self.group.update_stream({'stream_id': 'other stream'})
         self.assertEqual(self.group.stream, 'other stream')
 
+    def test_snapshot_restore(self):
+        async_run(self.group.set_muted(False))
+        self.group.snapshot()
+        async_run(self.group.set_muted(True))
+        self.assertEqual(self.group.muted, True)
+        async_run(self.group.restore())
+        self.assertEqual(self.group.muted, False)
+
     def test_set_callback(self):
         cb = MagicMock()
         self.group.set_callback(cb)

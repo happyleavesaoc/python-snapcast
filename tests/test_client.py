@@ -28,9 +28,7 @@ class TestSnapclient(unittest.TestCase):
             },
             'connected': True
         }
-        #group = MagicMock()
         server = MagicMock()
-        #server.group = group
         self.client = Snapclient(server, data)
 
     @mock.patch.object(Snapclient, 'group', new=1)
@@ -79,6 +77,15 @@ class TestSnapclient(unittest.TestCase):
     def test_update_connected(self):
         self.client.update_connected(False)
         self.assertEqual(self.client.connected, False)
+
+    @mock.patch.object(Snapclient, 'group')
+    def test_snapshot_restore(self, mock):
+        async_run(self.client.set_name('first'))
+        self.client.snapshot()
+        async_run(self.client.set_name('other name'))
+        self.assertEqual(self.client.name, 'other name')
+        async_run(self.client.restore())
+        self.assertEqual(self.client.name, 'first')
 
     def test_set_callback(self):
         cb = MagicMock()

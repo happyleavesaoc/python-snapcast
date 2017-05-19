@@ -6,12 +6,14 @@ import logging
 _LOGGER = logging.getLogger(__name__)
 
 
+# pylint: disable=too-many-public-methods
 class Snapclient(object):
     """Represents a snapclient."""
 
     def __init__(self, server, data):
         """Initialize."""
         self._server = server
+        self._snapshot = None
         self._last_seen = None
         self._callback_func = None
         self._client = data
@@ -120,6 +122,26 @@ class Snapclient(object):
         self._client['connected'] = status
         _LOGGER.info('updated connected status to %s on %s', status, self.friendly_name)
         self.callback()
+
+    def snapshot(self):
+        """Snapshot current state."""
+        self._snapshot = {
+            'name': self.name,
+            'volume': self.volume,
+            'muted': self.muted,
+            'latency': self.latency
+        }
+        _LOGGER.info('took snapshot of current state of %s', self.friendly_name)
+
+    def restore(self):
+        """Restore snapshotted state."""
+        if not self._snapshot:
+            return
+        yield from self.set_name(self._snapshot['name'])
+        yield from self.set_volume(self._snapshot['volume'])
+        yield from self.set_muted(self._snapshot['muted'])
+        yield from self.set_latency(self._snapshot['latency'])
+        _LOGGER.info('restored snapshot of state of %s', self.friendly_name)
 
     def callback(self):
         """Run callback."""

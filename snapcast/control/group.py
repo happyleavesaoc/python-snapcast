@@ -6,12 +6,14 @@ import logging
 _LOGGER = logging.getLogger(__name__)
 
 
+# pylint: disable=too-many-public-methods
 class Snapgroup(object):
     """Represents a snapcast group."""
 
     def __init__(self, server, data):
         """Initialize."""
         self._server = server
+        self._snapshot = None
         self._callback_func = None
         self.update(data)
 
@@ -127,6 +129,24 @@ class Snapgroup(object):
         self._group['stream_id'] = data['stream_id']
         self.callback()
         _LOGGER.info('updated stream to %s on %s', self.stream, self.friendly_name)
+
+    def snapshot(self):
+        """Snapshot current state."""
+        self._snapshot = {
+            'muted': self.muted,
+            'volume': self.volume,
+            'stream': self.stream
+        }
+        _LOGGER.info('took snapshot of current state of %s', self.friendly_name)
+
+    def restore(self):
+        """Restore snapshotted state."""
+        if not self._snapshot:
+            return
+        yield from self.set_muted(self._snapshot['muted'])
+        yield from self.set_volume(self._snapshot['muted'])
+        yield from self.set_stream(self._snapshot['stream'])
+        _LOGGER.info('restored snapshot of state of %s', self.friendly_name)
 
     def callback(self):
         """Run callback."""
