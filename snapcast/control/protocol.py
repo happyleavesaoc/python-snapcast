@@ -25,6 +25,7 @@ class SnapcastProtocol(asyncio.Protocol):
         self._transport = None
         self._buffer = {}
         self._callbacks = callbacks
+        self._data_buffer = ''
 
     def connection_made(self, transport):
         """When a connection is made."""
@@ -36,7 +37,12 @@ class SnapcastProtocol(asyncio.Protocol):
 
     def data_received(self, data):
         """Handle received data."""
-        for cmd in data.decode().strip().split('\r\n'):
+        self._data_buffer += data.decode()
+        if not self._data_buffer.endswith('\r\n'):
+            return
+        data = self._data_buffer
+        self._data_buffer = ''  # clear buffer
+        for cmd in data.strip().split('\r\n'):
             data = json.loads(cmd)
             if not isinstance(data, list):
                 data = [data]
