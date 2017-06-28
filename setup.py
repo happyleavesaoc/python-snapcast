@@ -2,13 +2,13 @@ from distutils.core import setup
 
 setup(
     name='snapcast',
-    version='2.0.5',
+    version='2.0.7',
     description='Control Snapcast.',
     url='https://github.com/happyleavesaoc/python-snapcast/',
     license='MIT',
     author='happyleaves',
     author_email='happyleaves.tfr@gmail.com',
-    packages=['snapcast.control', 'snapcast.client'],
+    packages=['snapcast', 'snapcast.control', 'snapcast.client'],
     install_requires=[
         'construct>=2.5.2',
     ],
