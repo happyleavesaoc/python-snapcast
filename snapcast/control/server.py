@@ -35,17 +35,20 @@ GROUP_SETCLIENTS = 'Group.SetClients'
 GROUP_ONMUTE = 'Group.OnMute'
 GROUP_ONSTREAMCHANGED = 'Group.OnStreamChanged'
 
+STREAM_SETMETA = 'Stream.SetMeta'
 STREAM_ONUPDATE = 'Stream.OnUpdate'
+STREAM_ONMETA = 'Stream.OnMetadata'
 
 SERVER_RECONNECT_DELAY = 5
 
 _EVENTS = [SERVER_ONUPDATE, CLIENT_ONVOLUMECHANGED, CLIENT_ONLATENCYCHANGED,
            CLIENT_ONNAMECHANGED, CLIENT_ONCONNECT, CLIENT_ONDISCONNECT,
-           GROUP_ONMUTE, GROUP_ONSTREAMCHANGED, STREAM_ONUPDATE]
+           GROUP_ONMUTE, GROUP_ONSTREAMCHANGED, STREAM_ONUPDATE, STREAM_ONMETA]
 _METHODS = [SERVER_GETSTATUS, SERVER_GETRPCVERSION, SERVER_DELETECLIENT,
             SERVER_DELETECLIENT, CLIENT_GETSTATUS, CLIENT_SETNAME,
             CLIENT_SETLATENCY, CLIENT_SETSTREAM, CLIENT_SETVOLUME,
-            GROUP_GETSTATUS, GROUP_SETMUTE, GROUP_SETSTREAM, GROUP_SETCLIENTS]
+            GROUP_GETSTATUS, GROUP_SETMUTE, GROUP_SETSTREAM, GROUP_SETCLIENTS,
+            STREAM_SETMETA]
 
 
 # pylint: disable=too-many-public-methods
@@ -72,6 +75,7 @@ class Snapserver(object):
             CLIENT_ONLATENCYCHANGED: self._on_client_latency_changed,
             GROUP_ONMUTE: self._on_group_mute,
             GROUP_ONSTREAMCHANGED: self._on_group_stream_changed,
+            STREAM_ONMETA: self._on_stream_meta,
             STREAM_ONUPDATE: self._on_stream_update,
             SERVER_ONDISCONNECT: self._on_server_disconnect,
             SERVER_ONUPDATE: self._on_server_update
@@ -163,6 +167,10 @@ class Snapserver(object):
     def group_clients(self, identifier, clients):
         """Set group clients."""
         return self._request(GROUP_SETCLIENTS, identifier, 'clients', clients)
+
+    def stream_setmeta(self, identifier, tags):
+        """Set streams metadata."""
+        return self._request(STREAM_SETMETA, identifier, 'meta', tags)
 
     def group(self, group_identifier):
         """Get a group."""
@@ -269,6 +277,14 @@ class Snapserver(object):
     def _on_client_latency_changed(self, data):
         """Handle client latency changed."""
         self._clients.get(data.get('id')).update_latency(data)
+
+    def _on_stream_meta(self, data):
+        """Handles stream metadata update."""
+        self._streams[data.get('id')].update_meta(data.get('meta'))
+        _LOGGER.info('stream %s updated', self._streams[data.get('id')].friendly_name)
+        for group in self._groups.values():
+            if group.stream == data.get('id'):
+                group.callback()
 
     def _on_stream_update(self, data):
         """Handle stream update."""
