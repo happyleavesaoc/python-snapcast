@@ -37,7 +37,6 @@ class Snapstream(object):
     def set_meta(self, tags):
         """Set stream metadata."""
         yield from self._server.stream_setmeta(self.identifier, tags)
-        _LOGGER.info('set stream metadata on %s', self.identifier)
 
     def update_meta(self, data):
         """Update stream metadata."""
