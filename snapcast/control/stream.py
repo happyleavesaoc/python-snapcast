@@ -4,10 +4,11 @@
 class Snapstream(object):
     """Represents a snapcast stream."""
 
-    def __init__(self, data):
+    def __init__(self, server, data):
         """Initialize."""
-        self.update(data)
+        self._server = server
         self._new_metadata_callback_func = None
+        self.update(data)
 
     @property
     def identifier(self):

@@ -1,4 +1,5 @@
 import unittest
+from unittest.mock import MagicMock
 from snapcast.control.stream import Snapstream
 
 
@@ -14,7 +15,8 @@ class TestSnapstream(unittest.TestCase):
                 }
             }
         }
-        self.stream = Snapstream(data)
+        server = MagicMock()
+        self.stream = Snapstream(server, data)
 
     def test_init(self):
         self.assertEqual(self.stream.identifier, 'test')
