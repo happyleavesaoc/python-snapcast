@@ -1,5 +1,5 @@
 """Snapcast client."""
-
+import asyncio
 import logging
 
 
@@ -52,6 +52,7 @@ class Snapclient(object):
         """Name."""
         return self._client.get('config').get('name')
 
+    @asyncio.coroutine
     def set_name(self, name):
         """Set a client name."""
         if not name:
@@ -64,6 +65,7 @@ class Snapclient(object):
         """Latency."""
         return self._client.get('config').get('latency')
 
+    @asyncio.coroutine
     def set_latency(self, latency):
         """Set client latency."""
         self._client['config']['latency'] = latency
@@ -74,6 +76,7 @@ class Snapclient(object):
         """Muted or not."""
         return self._client.get('config').get('volume').get('muted')
 
+    @asyncio.coroutine
     def set_muted(self, status):
         """Set client mute status."""
         new_volume = self._client['config']['volume']
@@ -87,6 +90,7 @@ class Snapclient(object):
         """Volume percent."""
         return self._client.get('config').get('volume').get('percent')
 
+    @asyncio.coroutine
     def set_volume(self, percent, update_group=True):
         """Set client volume percent."""
         if percent not in range(0, 101):
@@ -134,6 +138,7 @@ class Snapclient(object):
         }
         _LOGGER.info('took snapshot of current state of %s', self.friendly_name)
 
+    @asyncio.coroutine
     def restore(self):
         """Restore snapshotted state."""
         if not self._snapshot:
