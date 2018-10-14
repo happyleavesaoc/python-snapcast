@@ -80,6 +80,7 @@ class Snapserver(object):
         self._on_disconnect_callback_func = None
         self._new_client_callback_func = None
 
+    @asyncio.coroutine
     def start(self):
         """Initiate server connection."""
         yield from self._do_connect()
@@ -117,6 +118,7 @@ class Snapserver(object):
         """Version."""
         return self._version
 
+    @asyncio.coroutine
     def status(self):
         """System status."""
         result = yield from self._transact(SERVER_GETSTATUS)
@@ -126,6 +128,7 @@ class Snapserver(object):
         """RPC version."""
         return self._transact(SERVER_GETRPCVERSION)
 
+    @asyncio.coroutine
     def delete_client(self, identifier):
         """Delete client."""
         params = {'id': identifier}
@@ -207,6 +210,7 @@ class Snapserver(object):
                 self._clients[client.get('id')] = Snapclient(self, client)
                 _LOGGER.debug('client found: %s', self._clients[client.get('id')])
 
+    @asyncio.coroutine
     def _request(self, method, identifier, key=None, value=None):
         """Perform request with identifier."""
         params = {'id': identifier}
