@@ -4,7 +4,7 @@
 
 Control [Snapcast](https://github.com/badaix/snapcast) in Python 3. Reads client configurations, updates clients, and receives updates from other controllers.
 
-Supports Snapcast `0.11.1`.
+Supports Snapcast `0.15.0`.
 
 ## Install
 
