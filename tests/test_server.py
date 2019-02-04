@@ -196,10 +196,13 @@ class TestSnapserver(unittest.TestCase):
         cb.assert_called_with(e)
 
     def test_on_server_update(self):
+        cb = mock.MagicMock()
+        self.server.set_on_update_callback(cb)
         status = copy.deepcopy(return_values.get('Server.GetStatus'))
         status['server']['version'] = '0.12'
         self.server._on_server_update(status)
         self.assertEqual(self.server.version, '0.12')
+        cb.assert_called_with()
 
     def test_on_group_mute(self):
         data = {
