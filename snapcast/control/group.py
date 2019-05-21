@@ -102,6 +102,8 @@ class Snapgroup(object):
         new_clients.append(client_identifier)
         yield from self._server.group_clients(self.identifier, new_clients)
         _LOGGER.info('added %s to %s', client_identifier, self.identifier)
+        status = yield from self._server.status()
+        self._server.synchronize(status)
         self._server.client(client_identifier).callback()
         self.callback()
 
@@ -112,6 +114,8 @@ class Snapgroup(object):
         new_clients.remove(client_identifier)
         yield from self._server.group_clients(self.identifier, new_clients)
         _LOGGER.info('removed %s from %s', client_identifier, self.identifier)
+        status = yield from self._server.status()
+        self._server.synchronize(status)
         self._server.client(client_identifier).callback()
         self.callback()
 

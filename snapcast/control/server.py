@@ -242,7 +242,10 @@ class Snapserver(object):
 
     def _on_group_stream_changed(self, data):
         """Handle group stream change."""
-        self._groups.get(data.get('id')).update_stream(data)
+        group = self._groups.get(data.get('id'))
+        group.update_stream(data)
+        for clientID in group.clients:
+            self._clients.get(clientID).callback()
 
     def _on_client_connect(self, data):
         """Handle client connect."""
