@@ -29,6 +29,7 @@ class TestSnapclient(unittest.TestCase):
             'connected': True
         }
         server = MagicMock()
+        server.groups = ['test_group']
         self.client = Snapclient(server, data)
 
     @mock.patch.object(Snapclient, 'group', new=1)
@@ -92,3 +93,6 @@ class TestSnapclient(unittest.TestCase):
         self.client.set_callback(cb)
         self.client.update_connected(False)
         cb.assert_called_with(self.client)
+
+    def test_groups_available(self):
+        self.assertEqual(self.client.groups_available(), ['test_group'])
