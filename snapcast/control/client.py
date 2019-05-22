@@ -103,6 +103,10 @@ class Snapclient(object):
             self._server.group(self.group.identifier).callback()
         _LOGGER.info('set volume to %s on %s', percent, self.friendly_name)
 
+    def groups_available(self):
+        """Get available group objects."""
+        return [group for group in self._server.groups]
+
     def update_volume(self, data):
         """Update volume."""
         self._client['config']['volume'] = data['volume']
