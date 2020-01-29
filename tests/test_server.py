@@ -97,6 +97,9 @@ return_values = {
     },
     'Group.SetClients': {
         'clients': ['test']
+    },
+    'Stream.SetMeta': {
+        'id': 'stream'
     }
 }
 
@@ -175,6 +178,11 @@ class TestSnapserver(unittest.TestCase):
     def test_group_clients(self):
         result = self._run(self.server.group_clients('test', ['test']))
         self.assertEqual(result, ['test'])
+
+    @mock.patch.object(Snapserver, '_transact', new=mock_transact('Stream.SetMeta'))
+    def test_stream_setmeta(self):
+        result = self._run(self.server.stream_setmeta('stream', {'foo': 'bar'}))
+        self.assertIsNone(result)
 
     def test_synchronize(self):
         status = copy.deepcopy(return_values.get('Server.GetStatus'))
@@ -287,3 +295,13 @@ class TestSnapserver(unittest.TestCase):
         }
         self.server._on_stream_update(data)
         self.assertEqual(self.server.stream('stream').status, 'idle')
+
+    def test_on_meta_update(self):
+        data = {
+            'id': 'stream',
+            'meta': {
+                'TITLE': 'Happy!'
+            }
+        }
+        self.server._on_stream_meta(data)
+        self.assertDictEqual(self.server.stream('stream').meta, data['meta'])

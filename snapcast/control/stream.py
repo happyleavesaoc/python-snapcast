@@ -4,10 +4,8 @@
 class Snapstream(object):
     """Represents a snapcast stream."""
 
-    def __init__(self, server, data):
+    def __init__(self, data):
         """Initialize."""
-        self._server = server
-        self._new_metadata_callback_func = None
         self.update(data)
 
     @property
@@ -35,23 +33,13 @@ class Snapstream(object):
         """Get metadata."""
         return self._stream.get('meta')
 
-    def set_meta(self, tags):
-        """Set stream metadata."""
-        yield from self._server.stream_setmeta(self.identifier, tags)
-
-    def update_meta(self, data):
-        """Update stream metadata."""
-        self._stream["meta"] = data
-        if self._new_metadata_callback_func and callable(self._new_metadata_callback_func):
-            self._new_metadata_callback_func(self)
-
     def update(self, data):
         """Update stream."""
         self._stream = data
 
-    def set_meta_callback(self, func):
-        """Set new metadata callback function."""
-        self._new_metadata_callback_func = func
+    def update_meta(self, data):
+        """Update stream metadata."""
+        self._stream['meta'] = data
 
     def __repr__(self):
         """String representation."""

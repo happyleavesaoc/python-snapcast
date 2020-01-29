@@ -168,10 +168,9 @@ class Snapserver(object):
         """Set group clients."""
         return self._request(GROUP_SETCLIENTS, identifier, 'clients', clients)
 
-    def stream_setmeta(self, identifier, tags):
-        """Set streams metadata."""
-        _LOGGER.debug("stream_setmeta stream '%s' => %s", identifier, tags)
-        return self._request(STREAM_SETMETA, identifier, 'meta', tags)
+    def stream_setmeta(self, identifier, meta):
+        """Set stream metadata."""
+        return self._request(STREAM_SETMETA, identifier, 'meta', meta)
 
     def group(self, group_identifier):
         """Get a group."""
@@ -207,7 +206,7 @@ class Snapserver(object):
         self._clients = {}
         self._streams = {}
         for stream in status.get('server').get('streams'):
-            self._streams[stream.get('id')] = Snapstream(self, stream)
+            self._streams[stream.get('id')] = Snapstream(stream)
             _LOGGER.debug('stream found: %s', self._streams[stream.get('id')])
         for group in status.get('server').get('groups'):
             self._groups[group.get('id')] = Snapgroup(self, group)
@@ -222,7 +221,6 @@ class Snapserver(object):
         if key is not None and value is not None:
             params[key] = value
         result = yield from self._transact(method, params)
-        _LOGGER.debug('_request completed: %s', result)
         return result.get(key)
 
     def _on_server_connect(self):
@@ -282,8 +280,9 @@ class Snapserver(object):
 
     def _on_stream_meta(self, data):
         """Handle stream metadata update."""
-        self._streams[data.get('id')].update_meta(data.get('meta'))
-        _LOGGER.info('stream %s metadata updated', self._streams[data.get('id')].friendly_name)
+        stream = self._streams[data.get('id')]
+        stream.update_meta(data.get('meta'))
+        _LOGGER.info('stream %s metadata updated', stream.friendly_name)
         for group in self._groups.values():
             if group.stream == data.get('id'):
                 group.callback()
