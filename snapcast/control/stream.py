@@ -28,9 +28,18 @@ class Snapstream(object):
         """Get friendly name."""
         return self.name if self.name != '' else self.identifier
 
+    @property
+    def meta(self):
+        """Get metadata."""
+        return self._stream.get('meta')
+
     def update(self, data):
         """Update stream."""
         self._stream = data
+
+    def update_meta(self, data):
+        """Update stream metadata."""
+        self._stream['meta'] = data
 
     def __repr__(self):
         """String representation."""

@@ -12,6 +12,9 @@ class TestSnapstream(unittest.TestCase):
                 'query': {
                     'name': ''
                 }
+            },
+            'meta': {
+                'TITLE': 'Happy!',
             }
         }
         self.stream = Snapstream(data)
@@ -21,6 +24,7 @@ class TestSnapstream(unittest.TestCase):
         self.assertEqual(self.stream.status, 'playing')
         self.assertEqual(self.stream.name, '')
         self.assertEqual(self.stream.friendly_name, 'test')
+        self.assertDictEqual(self.stream.meta, {'TITLE': 'Happy!'})
 
     def test_update(self):
         self.stream.update({
@@ -28,3 +32,13 @@ class TestSnapstream(unittest.TestCase):
             'status': 'idle'
         })
         self.assertEqual(self.stream.status, 'idle')
+
+    def test_update_meta(self):
+        self.stream.update_meta({
+            'TITLE': 'Unhappy!'
+        })
+        self.assertDictEqual(self.stream.meta, {
+            'TITLE': 'Unhappy!'
+        })
+        # Verify that other attributes are still present
+        self.assertEqual(self.stream.status, 'playing')
