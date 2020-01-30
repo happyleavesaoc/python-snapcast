@@ -1,5 +1,5 @@
 """Snapcast group."""
-
+import asyncio
 import logging
 
 
@@ -36,6 +36,7 @@ class Snapgroup(object):
         """Get stream identifier."""
         return self._group.get('stream_id')
 
+    @asyncio.coroutine
     def set_stream(self, stream_id):
         """Set group stream."""
         self._group['stream_id'] = stream_id
@@ -52,6 +53,7 @@ class Snapgroup(object):
         """Get mute status."""
         return self._group.get('muted')
 
+    @asyncio.coroutine
     def set_muted(self, status):
         """Set group mute status."""
         self._group['muted'] = status
@@ -66,6 +68,7 @@ class Snapgroup(object):
             volume_sum += self._server.client(client.get('id')).volume
         return int(volume_sum / len(self._group.get('clients')))
 
+    @asyncio.coroutine
     def set_volume(self, volume):
         """Set volume."""
         for data in self._group.get('clients'):
@@ -89,6 +92,7 @@ class Snapgroup(object):
         """Get client identifiers."""
         return [client.get('id') for client in self._group.get('clients')]
 
+    @asyncio.coroutine
     def add_client(self, client_identifier):
         """Add a client."""
         if client_identifier in self.clients:
@@ -98,15 +102,20 @@ class Snapgroup(object):
         new_clients.append(client_identifier)
         yield from self._server.group_clients(self.identifier, new_clients)
         _LOGGER.info('added %s to %s', client_identifier, self.identifier)
+        status = yield from self._server.status()
+        self._server.synchronize(status)
         self._server.client(client_identifier).callback()
         self.callback()
 
+    @asyncio.coroutine
     def remove_client(self, client_identifier):
         """Remove a client."""
         new_clients = self.clients
         new_clients.remove(client_identifier)
         yield from self._server.group_clients(self.identifier, new_clients)
         _LOGGER.info('removed %s from %s', client_identifier, self.identifier)
+        status = yield from self._server.status()
+        self._server.synchronize(status)
         self._server.client(client_identifier).callback()
         self.callback()
 
@@ -135,6 +144,7 @@ class Snapgroup(object):
         }
         _LOGGER.info('took snapshot of current state of %s', self.friendly_name)
 
+    @asyncio.coroutine
     def restore(self):
         """Restore snapshotted state."""
         if not self._snapshot:

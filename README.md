@@ -4,7 +4,7 @@
 
 Control [Snapcast](https://github.com/badaix/snapcast) in Python 3. Reads client configurations, updates clients, and receives updates from other controllers.
 
-Supports Snapcast `0.11.1`.
+Supports Snapcast `0.15.0`.
 
 ## Install
 
@@ -14,23 +14,19 @@ Supports Snapcast `0.11.1`.
 
 ### Control
 ```python
+import asyncio
 import snapcast.control
 
-server = snapcast.control.Snapserver('localhost', snapcast.control.CONTROL_PORT)
+loop = asyncio.get_event_loop()
+server = loop.run_until_complete(snapcast.control.create_server(loop, 'localhost'))
 
+# print all client names
 for client in server.clients:
-    # client is an instance of snapcast.Snapclient
-    client.name = 'example'
-    print(client.name) # shows 'example'
-    client.volume = 100
-    print(client.volume) # shows 100
-    client.muted = True
-    print(client.muted) # shows True
-    client.latency = 0
-    print(client.latency) # shows 0
-    print(client.identifier) # shows 'example'
-    client.name = None
-    print(client.identifier) # shows ip address
+  print(client.friendly_name)
+
+# set volume for client #0 to 50%
+client = server.clients[0]
+loop.run_until_complete(server.client_volume(client.identifier, {'percent': 50, 'muted': False}))
 ```
 
 ### Client
