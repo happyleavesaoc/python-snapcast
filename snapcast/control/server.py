@@ -80,6 +80,7 @@ class Snapserver(object):
             SERVER_ONDISCONNECT: self._on_server_disconnect,
             SERVER_ONUPDATE: self._on_server_update
         }
+        self._on_update_callback_func = None
         self._on_connect_callback_func = None
         self._on_disconnect_callback_func = None
         self._new_client_callback_func = None
@@ -243,6 +244,8 @@ class Snapserver(object):
     def _on_server_update(self, data):
         """Handle server update."""
         self.synchronize(data)
+        if self._on_update_callback_func and callable(self._on_update_callback_func):
+            self._on_update_callback_func()
 
     def _on_group_mute(self, data):
         """Handle group mute."""
@@ -302,6 +305,10 @@ class Snapserver(object):
         for group in self._groups.values():
             if group.stream == data.get('id'):
                 group.callback()
+
+    def set_on_update_callback(self, func):
+        """Set on update callback function."""
+        self._on_update_callback_func = func
 
     def set_on_connect_callback(self, func):
         """Set on connection callback function."""
