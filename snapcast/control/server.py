@@ -298,6 +298,7 @@ class Snapserver(object):
         """Handle stream update."""
         self._streams[data.get('id')].update(data.get('stream'))
         _LOGGER.info('stream %s updated', self._streams[data.get('id')].friendly_name)
+        self._streams[data.get("id")].callback()
         for group in self._groups.values():
             if group.stream == data.get('id'):
                 group.callback()
