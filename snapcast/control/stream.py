@@ -7,6 +7,7 @@ class Snapstream(object):
     def __init__(self, data):
         """Initialize."""
         self.update(data)
+        self._callback_func = None
 
     @property
     def identifier(self):
@@ -44,3 +45,12 @@ class Snapstream(object):
     def __repr__(self):
         """String representation."""
         return 'Snapstream ({})'.format(self.name)
+
+    def callback(self):
+        """Run callback."""
+        if self._callback_func and callable(self._callback_func):
+            self._callback_func(self)
+
+    def set_callback(self, func):
+        """Set callback."""
+        self._callback_func = func
