@@ -71,16 +71,28 @@ class Snapgroup(object):
     @asyncio.coroutine
     def set_volume(self, volume):
         """Set volume."""
+        current_volume = self.volume
+        delta = volume - current_volume
+        if delta < 0:
+            ratio = (current_volume - volume) / current_volume
+        else:
+            ratio = (volume - current_volume) / (100 - current_volume)
         for data in self._group.get('clients'):
             client = self._server.client(data.get('id'))
-            yield from client.set_volume(volume, update_group=False)
+            client_volume = client.volume
+            if delta < 0:
+                client_volume -= ratio * client_volume
+            else:
+                client_volume += ratio * (100 - client_volume)
+            client_volume = round(client_volume)
+            yield from client.set_volume(client_volume, update_group=False)
             client.update_volume({
                 'volume': {
-                    'percent': volume,
+                    'percent': client_volume,
                     'muted': client.muted
                 }
             })
-        _LOGGER.info('set volume to %s on clients in %s', volume, self.friendly_name)
+        _LOGGER.info('set volume to %s on group %s', volume, self.friendly_name)
 
     @property
     def friendly_name(self):
