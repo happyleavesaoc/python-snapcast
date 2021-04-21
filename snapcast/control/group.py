@@ -71,7 +71,12 @@ class Snapgroup(object):
     @asyncio.coroutine
     def set_volume(self, volume):
         """Set volume."""
+        if volume not in range(0, 101):
+            raise ValueError('Volume out of range')
         current_volume = self.volume
+        if volume == current_volume:
+            _LOGGER.info('left volume at %s on group %s', volume, self.friendly_name)
+            return
         delta = volume - current_volume
         if delta < 0:
             ratio = (current_volume - volume) / current_volume
