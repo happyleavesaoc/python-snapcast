@@ -71,6 +71,8 @@ class Snapgroup(object):
     @asyncio.coroutine
     def set_volume(self, volume):
         """Set volume."""
+        if volume not in range(0, 101):
+            raise ValueError('Volume out of range')
         current_volume = self.volume
         if volume == current_volume:
             _LOGGER.info('left volume at %s on group %s', volume, self.friendly_name)
