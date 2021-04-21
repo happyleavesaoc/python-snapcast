@@ -2,7 +2,7 @@ from distutils.core import setup
 
 setup(
     name='snapcast',
-    version='2.1.2',
+    version='2.1.3',
     description='Control Snapcast.',
     url='https://github.com/happyleavesaoc/python-snapcast/',
     license='MIT',
