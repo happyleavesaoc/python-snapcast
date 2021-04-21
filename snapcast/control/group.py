@@ -72,6 +72,9 @@ class Snapgroup(object):
     def set_volume(self, volume):
         """Set volume."""
         current_volume = self.volume
+        if volume == current_volume:
+            _LOGGER.info('left volume at %s on group %s', volume, self.friendly_name)
+            return
         delta = volume - current_volume
         if delta < 0:
             ratio = (current_volume - volume) / current_volume
