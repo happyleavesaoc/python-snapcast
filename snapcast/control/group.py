@@ -31,6 +31,14 @@ class Snapgroup(object):
         """Get group name."""
         return self._group.get('name')
 
+    @asyncio.coroutine
+    def set_name(self, name):
+        """Set a group name."""
+        if not name:
+            name = ''
+        self._group['name'] = name
+        yield from self._server.group_name(self.identifier, name)
+
     @property
     def stream(self):
         """Get stream identifier."""
