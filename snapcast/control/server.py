@@ -32,6 +32,7 @@ GROUP_GETSTATUS = 'Group.GetStatus'
 GROUP_SETMUTE = 'Group.SetMute'
 GROUP_SETSTREAM = 'Group.SetStream'
 GROUP_SETCLIENTS = 'Group.SetClients'
+GROUP_SETNAME = 'Group.SetName'
 GROUP_ONMUTE = 'Group.OnMute'
 GROUP_ONSTREAMCHANGED = 'Group.OnStreamChanged'
 
@@ -48,7 +49,7 @@ _METHODS = [SERVER_GETSTATUS, SERVER_GETRPCVERSION, SERVER_DELETECLIENT,
             SERVER_DELETECLIENT, CLIENT_GETSTATUS, CLIENT_SETNAME,
             CLIENT_SETLATENCY, CLIENT_SETSTREAM, CLIENT_SETVOLUME,
             GROUP_GETSTATUS, GROUP_SETMUTE, GROUP_SETSTREAM, GROUP_SETCLIENTS,
-            STREAM_SETMETA]
+            GROUP_SETNAME, STREAM_SETMETA]
 
 
 # pylint: disable=too-many-public-methods
@@ -171,6 +172,10 @@ class Snapserver(object):
     def group_clients(self, identifier, clients):
         """Set group clients."""
         return self._request(GROUP_SETCLIENTS, identifier, 'clients', clients)
+
+    def group_name(self, identifier, name):
+        """Set group name."""
+        return self._request(GROUP_SETNAME, identifier, 'name', name)
 
     def stream_setmeta(self, identifier, meta):
         """Set stream metadata."""

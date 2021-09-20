@@ -29,7 +29,6 @@ class TestSnapgroup(unittest.TestCase):
         server.client = MagicMock(return_value=client)
         self.group = Snapgroup(server, data)
 
-
     def test_init(self):
         self.assertEqual(self.group.identifier, 'test')
         self.assertEqual(self.group.name, '')
