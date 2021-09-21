@@ -8,10 +8,25 @@ from snapcast.control.server import Snapserver
 from snapcast.control import create_server
 
 
+SERVER_STATUS = {
+    'host': {
+        'arch': 'x86_64',
+        'ip': '',
+        'mac': '',
+        'name': 'T400',
+        'os': 'Linux Mint 17.3 Rosa'
+    },
+    'snapserver': {
+        'controlProtocolVersion': 1,
+        'name': 'Snapserver',
+        'protocolVersion': 1,
+        'version': '0.12.0'
+    }
+}
+
 return_values = {
     'Server.GetStatus': {
         'server': {
-            'version': 0.11,
             'groups': [
                 {
                     'id': 'test',
@@ -43,6 +58,7 @@ return_values = {
                     ]
                 }
             ],
+            'server': SERVER_STATUS,
             'streams': [
                 {
                     'id': 'stream',
@@ -80,6 +96,7 @@ return_values = {
                   'clients': []
               }
           ],
+          'server': SERVER_STATUS,  # DeleteClient calls synchronize
           'streams': [
           ]
        }
@@ -120,7 +137,7 @@ class TestSnapserver(unittest.TestCase):
         self.server.synchronize(return_values.get('Server.GetStatus'))
 
     def test_init(self):
-        self.assertEqual(self.server.version, 0.11)
+        self.assertEqual(self.server.version, '0.12.0')
         self.assertEqual(len(self.server.clients), 1)
         self.assertEqual(len(self.server.groups), 1)
         self.assertEqual(len(self.server.streams), 1)
@@ -131,7 +148,7 @@ class TestSnapserver(unittest.TestCase):
     @mock.patch.object(Snapserver, '_transact', new=mock_transact('Server.GetStatus'))
     def test_status(self):
         status = self._run(self.server.status())
-        self.assertEqual(status.get('server').get('version'), 0.11)
+        self.assertEqual(status['server']['server']['snapserver']['version'], '0.12.0')
 
     @mock.patch.object(Snapserver, '_transact', new=mock_transact('Server.GetRPCVersion'))
     def test_rpc_version(self):
@@ -186,7 +203,7 @@ class TestSnapserver(unittest.TestCase):
 
     def test_synchronize(self):
         status = copy.deepcopy(return_values.get('Server.GetStatus'))
-        status['server']['version'] = '0.12'
+        status['server']['server']['snapserver']['version'] = '0.12'
         self.server.synchronize(status)
         self.assertEqual(self.server.version, '0.12')
 
@@ -207,7 +224,7 @@ class TestSnapserver(unittest.TestCase):
         cb = mock.MagicMock()
         self.server.set_on_update_callback(cb)
         status = copy.deepcopy(return_values.get('Server.GetStatus'))
-        status['server']['version'] = '0.12'
+        status['server']['server']['snapserver']['version'] = '0.12'
         self.server._on_server_update(status)
         self.assertEqual(self.server.version, '0.12')
         cb.assert_called_with()

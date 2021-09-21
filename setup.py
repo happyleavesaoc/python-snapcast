@@ -11,6 +11,7 @@ setup(
     packages=['snapcast', 'snapcast.control', 'snapcast.client'],
     install_requires=[
         'construct>=2.5.2',
+        'packaging',
     ],
     classifiers=[
         'License :: OSI Approved :: MIT License',
