@@ -2,11 +2,12 @@
 
 import asyncio
 import logging
-from snapcast.control.protocol import SnapcastProtocol, SERVER_ONDISCONNECT
+
+from packaging import version
 from snapcast.control.client import Snapclient
 from snapcast.control.group import Snapgroup
+from snapcast.control.protocol import SERVER_ONDISCONNECT, SnapcastProtocol
 from snapcast.control.stream import Snapstream
-
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -32,6 +33,7 @@ GROUP_GETSTATUS = 'Group.GetStatus'
 GROUP_SETMUTE = 'Group.SetMute'
 GROUP_SETSTREAM = 'Group.SetStream'
 GROUP_SETCLIENTS = 'Group.SetClients'
+GROUP_SETNAME = 'Group.SetName'
 GROUP_ONMUTE = 'Group.OnMute'
 GROUP_ONSTREAMCHANGED = 'Group.OnStreamChanged'
 
@@ -48,7 +50,16 @@ _METHODS = [SERVER_GETSTATUS, SERVER_GETRPCVERSION, SERVER_DELETECLIENT,
             SERVER_DELETECLIENT, CLIENT_GETSTATUS, CLIENT_SETNAME,
             CLIENT_SETLATENCY, CLIENT_SETSTREAM, CLIENT_SETVOLUME,
             GROUP_GETSTATUS, GROUP_SETMUTE, GROUP_SETSTREAM, GROUP_SETCLIENTS,
-            STREAM_SETMETA]
+            GROUP_SETNAME, STREAM_SETMETA]
+
+# server versions in which new methods were added
+_VERSIONS = {
+    GROUP_SETNAME: '0.16.0',
+}
+
+
+class ServerVersionError(NotImplementedError):
+    pass
 
 
 # pylint: disable=too-many-public-methods
@@ -172,6 +183,11 @@ class Snapserver(object):
         """Set group clients."""
         return self._request(GROUP_SETCLIENTS, identifier, 'clients', clients)
 
+    def group_name(self, identifier, name):
+        """Set group name."""
+        self._version_check(GROUP_SETNAME)
+        return self._request(GROUP_SETNAME, identifier, 'name', name)
+
     def stream_setmeta(self, identifier, meta):
         """Set stream metadata."""
         return self._request(STREAM_SETMETA, identifier, 'meta', meta)
@@ -205,7 +221,7 @@ class Snapserver(object):
 
     def synchronize(self, status):
         """Synchronize snapserver."""
-        self._version = status.get('server').get('version')
+        self._version = status['server']['server']['snapserver']['version']
         self._groups = {}
         self._clients = {}
         self._streams = {}
@@ -325,3 +341,9 @@ class Snapserver(object):
     def __repr__(self):
         """String representation."""
         return 'Snapserver {} ({})'.format(self.version, self._host)
+
+    def _version_check(self, api_call):
+        if version.parse(self.version) < version.parse(_VERSIONS.get(api_call)):
+            raise ServerVersionError(
+                f"{api_call} requires server version >= {_VERSIONS[api_call]}. Current version is {self.version}"
+            )

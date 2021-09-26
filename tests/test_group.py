@@ -29,7 +29,6 @@ class TestSnapgroup(unittest.TestCase):
         server.client = MagicMock(return_value=client)
         self.group = Snapgroup(server, data)
 
-
     def test_init(self):
         self.assertEqual(self.group.identifier, 'test')
         self.assertEqual(self.group.name, '')
@@ -56,6 +55,10 @@ class TestSnapgroup(unittest.TestCase):
     def test_set_stream(self):
         async_run(self.group.set_stream('new stream'))
         self.assertEqual(self.group.stream, 'new stream')
+
+    def test_set_name(self):
+        async_run(self.group.set_name('test'))
+        self.assertEqual(self.group.name, 'test')
 
     def test_add_client(self):
         self.group.add_client('c')
