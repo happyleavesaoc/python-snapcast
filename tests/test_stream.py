@@ -5,7 +5,7 @@ from snapcast.control.stream import Snapstream
 class TestSnapstream(unittest.TestCase):
 
     def setUp(self):
-        data = {
+        data_meta = {
             'id': 'test',
             'status': 'playing',
             'uri': {
@@ -17,6 +17,22 @@ class TestSnapstream(unittest.TestCase):
                 'TITLE': 'Happy!',
             }
         }
+        data = {
+            'id': 'test',
+            'status': 'playing',
+            'uri': {
+                'query': {
+                    'name': ''
+                }
+            },
+            'properties': {
+                'canControl': False,
+                'metadata': {
+                    'title': 'Happy!',
+                }
+            }
+        }
+        self.stream_meta = Snapstream(data_meta)
         self.stream = Snapstream(data)
 
     def test_init(self):
@@ -24,7 +40,10 @@ class TestSnapstream(unittest.TestCase):
         self.assertEqual(self.stream.status, 'playing')
         self.assertEqual(self.stream.name, '')
         self.assertEqual(self.stream.friendly_name, 'test')
-        self.assertDictEqual(self.stream.meta, {'TITLE': 'Happy!'})
+        self.assertDictEqual(self.stream_meta.meta, {'TITLE': 'Happy!'})
+        self.assertDictEqual(self.stream.properties['metadata'], {'title': 'Happy!'})
+        self.assertDictEqual(self.stream.properties, {'canControl': False, 'metadata': {'title': 'Happy!',}})
+        self.assertDictEqual(self.stream.metadata, {'title': 'Happy!'})
 
     def test_update(self):
         self.stream.update({
@@ -34,11 +53,37 @@ class TestSnapstream(unittest.TestCase):
         self.assertEqual(self.stream.status, 'idle')
 
     def test_update_meta(self):
-        self.stream.update_meta({
+        self.stream_meta.update_meta({
             'TITLE': 'Unhappy!'
         })
-        self.assertDictEqual(self.stream.meta, {
+        self.assertDictEqual(self.stream_meta.meta, {
             'TITLE': 'Unhappy!'
+        })
+        # Verify that other attributes are still present
+        self.assertEqual(self.stream.status, 'playing')
+
+    def test_update_metadata(self):
+        self.stream.update_metadata({
+            'title': 'Unhappy!'
+        })
+        self.assertDictEqual(self.stream.metadata, {
+            'title': 'Unhappy!'
+        })
+        # Verify that other attributes are still present
+        self.assertEqual(self.stream.status, 'playing')
+
+    def test_update_properties(self):
+        self.stream.update_properties({
+            'canControl': True,
+            'metadata': {
+                'title': 'Unhappy!',
+            }
+        })
+        self.assertDictEqual(self.stream.properties, {
+            'canControl': True,
+            'metadata': {
+                'title': 'Unhappy!',
+            }
         })
         # Verify that other attributes are still present
         self.assertEqual(self.stream.status, 'playing')

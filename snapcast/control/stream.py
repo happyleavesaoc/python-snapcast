@@ -30,9 +30,20 @@ class Snapstream(object):
         return self.name if self.name != '' else self.identifier
 
     @property
-    def meta(self):
+    def metadata(self):
         """Get metadata."""
+        if 'properties' in self._stream:
+            return self._stream['properties'].get('metadata')
         return self._stream.get('meta')
+
+    @property
+    def meta(self):
+        return self.metadata
+
+    @property
+    def properties(self):
+        """Get properties."""
+        return self._stream.get('properties')
 
     def update(self, data):
         """Update stream."""
@@ -40,7 +51,17 @@ class Snapstream(object):
 
     def update_meta(self, data):
         """Update stream metadata."""
+        self.update_metadata(data)
+
+    def update_metadata(self, data):
+        """Update stream metadata."""
+        if 'properties' in self._stream:
+            self._stream['properties']['metadata'] = data
         self._stream['meta'] = data
+
+    def update_properties(self, data):
+        """Update stream properties."""
+        self._stream['properties'] = data
 
     def __repr__(self):
         """String representation."""

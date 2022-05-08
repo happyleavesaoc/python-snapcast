@@ -20,7 +20,7 @@ SERVER_STATUS = {
         'controlProtocolVersion': 1,
         'name': 'Snapserver',
         'protocolVersion': 1,
-        'version': '0.12.0'
+        'version': '0.26.0'
     }
 }
 
@@ -66,6 +66,12 @@ return_values = {
                     'uri': {
                         'query': {
                             'name': 'stream'
+                        }
+                    },
+                    'properties': {
+                        'canControl': False,
+                        'metadata': {
+                            'title': 'Happy!',
                         }
                     }
                 }
@@ -117,6 +123,9 @@ return_values = {
     },
     'Stream.SetMeta': {
         'id': 'stream'
+    },
+    'Stream.SetProperty': {
+        'id': 'stream'
     }
 }
 
@@ -137,7 +146,7 @@ class TestSnapserver(unittest.TestCase):
         self.server.synchronize(return_values.get('Server.GetStatus'))
 
     def test_init(self):
-        self.assertEqual(self.server.version, '0.12.0')
+        self.assertEqual(self.server.version, '0.26.0')
         self.assertEqual(len(self.server.clients), 1)
         self.assertEqual(len(self.server.groups), 1)
         self.assertEqual(len(self.server.streams), 1)
@@ -148,7 +157,7 @@ class TestSnapserver(unittest.TestCase):
     @mock.patch.object(Snapserver, '_transact', new=mock_transact('Server.GetStatus'))
     def test_status(self):
         status = self._run(self.server.status())
-        self.assertEqual(status['server']['server']['snapserver']['version'], '0.12.0')
+        self.assertEqual(status['server']['server']['snapserver']['version'], '0.26.0')
 
     @mock.patch.object(Snapserver, '_transact', new=mock_transact('Server.GetRPCVersion'))
     def test_rpc_version(self):
@@ -199,6 +208,11 @@ class TestSnapserver(unittest.TestCase):
     @mock.patch.object(Snapserver, '_transact', new=mock_transact('Stream.SetMeta'))
     def test_stream_setmeta(self):
         result = self._run(self.server.stream_setmeta('stream', {'foo': 'bar'}))
+        self.assertIsNone(result)
+
+    @mock.patch.object(Snapserver, '_transact', new=mock_transact('Stream.SetProperty'))
+    def test_stream_setproperty(self):
+        result = self._run(self.server.stream_setproperty('stream', {'foo': 'bar'}))
         self.assertIsNone(result)
 
     def test_synchronize(self):
@@ -325,3 +339,16 @@ class TestSnapserver(unittest.TestCase):
         }
         self.server._on_stream_meta(data)
         self.assertDictEqual(self.server.stream('stream').meta, data['meta'])
+
+    def test_on_properties_update(self):
+        data = {
+            'id': 'stream',
+            'properties': {
+                'canControl': True,
+                'metadata': {
+                    'title': 'Unhappy!',
+                }
+            }
+        }
+        self.server._on_stream_properties(data)
+        self.assertDictEqual(self.server.stream('stream').properties, data['properties'])
