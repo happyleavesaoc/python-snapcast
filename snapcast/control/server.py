@@ -21,7 +21,6 @@ SERVER_ONUPDATE = 'Server.OnUpdate'
 CLIENT_GETSTATUS = 'Client.GetStatus'
 CLIENT_SETNAME = 'Client.SetName'
 CLIENT_SETLATENCY = 'Client.SetLatency'
-CLIENT_SETSTREAM = 'Client.SetStream'
 CLIENT_SETVOLUME = 'Client.SetVolume'
 CLIENT_ONCONNECT = 'Client.OnConnect'
 CLIENT_ONDISCONNECT = 'Client.OnDisconnect'
@@ -36,25 +35,32 @@ GROUP_SETCLIENTS = 'Group.SetClients'
 GROUP_SETNAME = 'Group.SetName'
 GROUP_ONMUTE = 'Group.OnMute'
 GROUP_ONSTREAMCHANGED = 'Group.OnStreamChanged'
+GROUP_ONNAMECHANGED = 'Group.OnStreamChanged' #not yet implemented
 
-STREAM_SETMETA = 'Stream.SetMeta'
+
+STREAM_ONPROPERTIES = 'Stream.OnProperties'
+STREAM_SETPROPERTY = 'Stream.SetProperty'
+STREAM_CONTROL = 'Stream.Control' #not yet implemented
+STREAM_SETMETA = 'Stream.SetMeta' #deprecated
 STREAM_ONUPDATE = 'Stream.OnUpdate'
-STREAM_ONMETA = 'Stream.OnMetadata'
+STREAM_ONMETA = 'Stream.OnMetadata' #deprecated
 
 SERVER_RECONNECT_DELAY = 5
 
 _EVENTS = [SERVER_ONUPDATE, CLIENT_ONVOLUMECHANGED, CLIENT_ONLATENCYCHANGED,
            CLIENT_ONNAMECHANGED, CLIENT_ONCONNECT, CLIENT_ONDISCONNECT,
-           GROUP_ONMUTE, GROUP_ONSTREAMCHANGED, STREAM_ONUPDATE, STREAM_ONMETA]
+           GROUP_ONMUTE, GROUP_ONSTREAMCHANGED, GROUP_ONNAMECHANGED, STREAM_ONUPDATE,
+           STREAM_ONMETA, STREAM_ONPROPERTIES]
 _METHODS = [SERVER_GETSTATUS, SERVER_GETRPCVERSION, SERVER_DELETECLIENT,
             SERVER_DELETECLIENT, CLIENT_GETSTATUS, CLIENT_SETNAME,
-            CLIENT_SETLATENCY, CLIENT_SETSTREAM, CLIENT_SETVOLUME,
+            CLIENT_SETLATENCY, CLIENT_SETVOLUME,
             GROUP_GETSTATUS, GROUP_SETMUTE, GROUP_SETSTREAM, GROUP_SETCLIENTS,
-            GROUP_SETNAME, STREAM_SETMETA]
+            GROUP_SETNAME, STREAM_SETMETA, STREAM_SETPROPERTY, STREAM_CONTROL]
 
 # server versions in which new methods were added
 _VERSIONS = {
     GROUP_SETNAME: '0.16.0',
+    STREAM_SETPROPERTY: '0.26.0',
 }
 
 
@@ -87,6 +93,7 @@ class Snapserver(object):
             GROUP_ONMUTE: self._on_group_mute,
             GROUP_ONSTREAMCHANGED: self._on_group_stream_changed,
             STREAM_ONMETA: self._on_stream_meta,
+            STREAM_ONPROPERTIES: self._on_stream_properties,
             STREAM_ONUPDATE: self._on_stream_update,
             SERVER_ONDISCONNECT: self._on_server_disconnect,
             SERVER_ONUPDATE: self._on_server_update
@@ -188,9 +195,14 @@ class Snapserver(object):
         self._version_check(GROUP_SETNAME)
         return self._request(GROUP_SETNAME, identifier, 'name', name)
 
-    def stream_setmeta(self, identifier, meta):
+    def stream_setmeta(self, identifier, meta): #deprecated
         """Set stream metadata."""
         return self._request(STREAM_SETMETA, identifier, 'meta', meta)
+
+    def stream_setproperty(self, identifier, stream_property):
+        """Set stream metadata."""
+        self._version_check(STREAM_SETPROPERTY)
+        return self._request(STREAM_SETPROPERTY, identifier, 'property', stream_property)
 
     def group(self, group_identifier):
         """Get a group."""
@@ -304,11 +316,20 @@ class Snapserver(object):
         """Handle client latency changed."""
         self._clients.get(data.get('id')).update_latency(data)
 
-    def _on_stream_meta(self, data):
+    def _on_stream_meta(self, data): #deprecated
         """Handle stream metadata update."""
         stream = self._streams[data.get('id')]
         stream.update_meta(data.get('meta'))
         _LOGGER.info('stream %s metadata updated', stream.friendly_name)
+        for group in self._groups.values():
+            if group.stream == data.get('id'):
+                group.callback()
+
+    def _on_stream_properties(self, data):
+        """Handle stream properties update."""
+        stream = self._streams[data.get('id')]
+        stream.update_properties(data.get('properties'))
+        _LOGGER.info('stream %s properties updated', stream.friendly_name)
         for group in self._groups.values():
             if group.stream == data.get('id'):
                 group.callback()
