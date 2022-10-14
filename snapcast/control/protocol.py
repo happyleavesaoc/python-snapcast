@@ -60,6 +60,7 @@ class SnapcastProtocol(asyncio.Protocol):
         """Handle JSONRPC response."""
         identifier = data.get('id')
         self._buffer[identifier]['data'] = data.get('result')
+        self._buffer[identifier]['error'] = data.get('error')
         self._buffer[identifier]['flag'].set()
 
     def handle_notification(self, data):
@@ -75,5 +76,7 @@ class SnapcastProtocol(asyncio.Protocol):
         self._buffer[identifier] = {'flag': asyncio.Event()}
         yield from self._buffer[identifier]['flag'].wait()
         result = self._buffer[identifier]['data']
+        error = self._buffer[identifier]['error']
         del self._buffer[identifier]['data']
-        return result
+        del self._buffer[identifier]['error']
+        return (result, error)
