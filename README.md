@@ -27,6 +27,25 @@ for client in server.clients:
 # set volume for client #0 to 50%
 client = server.clients[0]
 loop.run_until_complete(server.client_volume(client.identifier, {'percent': 50, 'muted': False}))
+
+# create background task (polling)
+async def testloop():
+    while(1):
+        print("still running")
+        #print(json.dumps(server.streams[0].properties, indent=4))
+        print(server.groups)
+        await asyncio.sleep(10)
+
+test = loop.create_task(testloop())
+
+# add callback for client #0 volume change
+def my_update_func(client):
+    print(client.volume)
+    
+server.clients[0].set_callback(my_update_func)
+
+# keep loop running to receive callbacks and to keep background task alive
+loop.run_forever()
 ```
 
 ### Client
