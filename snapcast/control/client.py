@@ -16,6 +16,10 @@ class Snapclient(object):
         self._snapshot = None
         self._last_seen = None
         self._callback_func = None
+        self.update(data)
+
+    def update(self, data):
+        """Update client."""
         self._client = data
 
     @property

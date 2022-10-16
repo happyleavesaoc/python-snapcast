@@ -260,18 +260,33 @@ class Snapserver(object):
     def synchronize(self, status):
         """Synchronize snapserver."""
         self._version = status['server']['server']['snapserver']['version']
-        self._groups = {}
-        self._clients = {}
-        self._streams = {}
+        new_groups = {}
+        new_clients = {}
+        new_streams = {}
         for stream in status.get('server').get('streams'):
-            self._streams[stream.get('id')] = Snapstream(stream)
-            _LOGGER.debug('stream found: %s', self._streams[stream.get('id')])
+            if stream.get('id') in self._streams:
+                new_streams[stream.get('id')] = self._streams[stream.get('id')]
+                new_streams[stream.get('id')].update(stream)
+            else:
+                new_streams[stream.get('id')] = Snapstream(stream)
+            _LOGGER.debug('stream found: %s', new_streams[stream.get('id')])
         for group in status.get('server').get('groups'):
-            self._groups[group.get('id')] = Snapgroup(self, group)
-            _LOGGER.debug('group found: %s', self._groups[group.get('id')])
+            if group.get('id') in self._groups:
+                new_groups[group.get('id')] = self._groups[group.get('id')]
+                new_groups[group.get('id')].update(group)
+            else:
+                new_groups[group.get('id')] = Snapgroup(self, group)
+            _LOGGER.debug('group found: %s', new_groups[group.get('id')])
             for client in group.get('clients'):
-                self._clients[client.get('id')] = Snapclient(self, client)
-                _LOGGER.debug('client found: %s', self._clients[client.get('id')])
+                if client.get('id') in self._clients:
+                    new_clients[client.get('id')] = self._clients[client.get('id')]
+                    new_clients[client.get('id')].update(client)
+                else:
+                    new_clients[client.get('id')] = Snapclient(self, client)
+                _LOGGER.debug('client found: %s', new_clients[client.get('id')])
+        self._groups = new_groups
+        self._clients = new_clients
+        self._streams = new_streams
 
     @asyncio.coroutine
     def _request(self, method, identifier, key=None, value=None, parameters=None):
