@@ -154,6 +154,12 @@ class Snapgroup(object):
         self.callback()
         _LOGGER.info('updated mute on %s', self.friendly_name)
 
+    def update_name(self, data):
+        """Update name."""
+        self._group['name'] = data['name']
+        _LOGGER.info('updated name on %s', self.name)
+        self.callback()
+
     def update_stream(self, data):
         """Update stream."""
         self._group['stream_id'] = data['stream_id']

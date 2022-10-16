@@ -35,7 +35,7 @@ GROUP_SETCLIENTS = 'Group.SetClients'
 GROUP_SETNAME = 'Group.SetName'
 GROUP_ONMUTE = 'Group.OnMute'
 GROUP_ONSTREAMCHANGED = 'Group.OnStreamChanged'
-GROUP_ONNAMECHANGED = 'Group.OnStreamChanged' #not yet implemented
+GROUP_ONNAMECHANGED = 'Group.OnNameChanged'
 
 
 STREAM_ONPROPERTIES = 'Stream.OnProperties'
@@ -92,6 +92,7 @@ class Snapserver(object):
             CLIENT_ONLATENCYCHANGED: self._on_client_latency_changed,
             GROUP_ONMUTE: self._on_group_mute,
             GROUP_ONSTREAMCHANGED: self._on_group_stream_changed,
+            GROUP_ONNAMECHANGED: self._on_group_name_changed,
             STREAM_ONMETA: self._on_stream_meta,
             STREAM_ONPROPERTIES: self._on_stream_properties,
             STREAM_ONUPDATE: self._on_stream_update,
@@ -133,8 +134,8 @@ class Snapserver(object):
     @asyncio.coroutine
     def _transact(self, method, params=None):
         """Wrap requests."""
-        result = yield from self._protocol.request(method, params)
-        return result
+        result, error = yield from self._protocol.request(method, params)
+        return result or error
 
     @property
     def version(self):
@@ -195,14 +196,19 @@ class Snapserver(object):
         self._version_check(GROUP_SETNAME)
         return self._request(GROUP_SETNAME, identifier, 'name', name)
 
+    def stream_control(self, identifier, control_command, control_params):
+        """Set stream control."""
+        self._version_check(STREAM_SETPROPERTY)
+        return self._request(STREAM_CONTROL, identifier, 'command', control_command, control_params)
+
     def stream_setmeta(self, identifier, meta): #deprecated
         """Set stream metadata."""
         return self._request(STREAM_SETMETA, identifier, 'meta', meta)
 
-    def stream_setproperty(self, identifier, stream_property):
+    def stream_setproperty(self, identifier, stream_property, value):
         """Set stream metadata."""
         self._version_check(STREAM_SETPROPERTY)
-        return self._request(STREAM_SETPROPERTY, identifier, 'property', stream_property)
+        return self._request(STREAM_SETPROPERTY, identifier, parameters = {'property': stream_property, 'value': value})
 
     def group(self, group_identifier):
         """Get a group."""
@@ -248,13 +254,17 @@ class Snapserver(object):
                 _LOGGER.debug('client found: %s', self._clients[client.get('id')])
 
     @asyncio.coroutine
-    def _request(self, method, identifier, key=None, value=None):
+    def _request(self, method, identifier, key=None, value=None, parameters=None):
         """Perform request with identifier."""
         params = {'id': identifier}
         if key is not None and value is not None:
             params[key] = value
+        if type(parameters) is dict:
+            params.update(parameters)
         result = yield from self._transact(method, params)
-        return result.get(key)
+        if type(result) is dict and key in result:
+            return result.get(key)
+        return result
 
     def _on_server_connect(self):
         """Handle server connection."""
@@ -281,6 +291,10 @@ class Snapserver(object):
         group.update_mute(data)
         for clientID in group.clients:
             self._clients.get(clientID).callback()
+
+    def _on_group_name_changed(self, data):
+        """Handle group name changed."""
+        self._groups.get(data.get('id')).update_name(data)
 
     def _on_group_stream_changed(self, data):
         """Handle group stream change."""
