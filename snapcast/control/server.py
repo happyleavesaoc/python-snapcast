@@ -78,12 +78,14 @@ class Snapserver(object):
         self._loop = loop
         self._port = port
         self._reconnect = reconnect
+        self._is_stopped = True
         self._clients = {}
         self._streams = {}
         self._groups = {}
         self._host = host
         self._version = None
         self._protocol = None
+        self._transport = None
         self._callbacks = {
             CLIENT_ONCONNECT: self._on_client_connect,
             CLIENT_ONDISCONNECT: self._on_client_disconnect,
@@ -107,16 +109,34 @@ class Snapserver(object):
     @asyncio.coroutine
     def start(self):
         """Initiate server connection."""
+        self._is_stopped = False
         yield from self._do_connect()
         _LOGGER.info('connected to snapserver on %s:%s', self._host, self._port)
         status = yield from self.status()
         self.synchronize(status)
         self._on_server_connect()
 
+    async def stop(self):
+        """Stop server."""
+        self._is_stopped = True
+        self._do_disconnect()
+        _LOGGER.info('disconnected from snapserver on %s:%s', self._host, self._port)
+        self._clients = {}
+        self._streams = {}
+        self._groups = {}
+        self._version = None
+        self._protocol = None
+        self._transport = None
+
+    def _do_disconnect(self):
+        """Perform the connection to the server."""
+        if self._transport:
+            self._transport.close()
+
     @asyncio.coroutine
     def _do_connect(self):
         """Perform the connection to the server."""
-        _, self._protocol = yield from self._loop.create_connection(
+        self._transport, self._protocol = yield from self._loop.create_connection(
             lambda: SnapcastProtocol(self._callbacks), self._host, self._port)
 
     def _reconnect_cb(self):
@@ -273,11 +293,14 @@ class Snapserver(object):
 
     def _on_server_disconnect(self, exception):
         """Handle server disconnection."""
-        self._protocol = None
         if self._on_disconnect_callback_func and callable(self._on_disconnect_callback_func):
             self._on_disconnect_callback_func(exception)
-        if self._reconnect:
-            self._reconnect_cb()
+        if not self._is_stopped:
+            self._do_disconnect()
+            self._protocol = None
+            self._transport = None
+            if self._reconnect:
+                self._reconnect_cb()
 
     def _on_server_update(self, data):
         """Handle server update."""
