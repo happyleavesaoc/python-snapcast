@@ -141,20 +141,30 @@ class Snapserver(object):
 
     def _reconnect_cb(self):
         """Callback to reconnect to the server."""
+        _LOGGER.info('try reconnect')
         @asyncio.coroutine
         def try_reconnect():
             """Actual coroutine ro try to reconnect or reschedule."""
             try:
                 yield from self._do_connect()
-            except IOError:
+            except OSError:
                 self._loop.call_later(SERVER_RECONNECT_DELAY,
                                       self._reconnect_cb)
+            else:
+                status = yield from self.status()
+                self.synchronize(status)
+                self._on_server_connect()
         asyncio.ensure_future(try_reconnect())
 
     @asyncio.coroutine
     def _transact(self, method, params=None):
         """Wrap requests."""
-        result, error = yield from self._protocol.request(method, params)
+        result = error = None
+        try:
+            result, error = yield from self._protocol.request(method, params)
+        except:
+            _LOGGER.warning('could not send request')
+            error = 'could not send request'
         return result or error
 
     @property
@@ -303,11 +313,13 @@ class Snapserver(object):
 
     def _on_server_connect(self):
         """Handle server connection."""
+        _LOGGER.info('Server connected')
         if self._on_connect_callback_func and callable(self._on_connect_callback_func):
             self._on_connect_callback_func()
 
     def _on_server_disconnect(self, exception):
         """Handle server disconnection."""
+        _LOGGER.info('Server disconnected')
         if self._on_disconnect_callback_func and callable(self._on_disconnect_callback_func):
             self._on_disconnect_callback_func(exception)
         if not self._is_stopped:
