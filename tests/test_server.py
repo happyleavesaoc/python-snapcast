@@ -122,11 +122,9 @@ return_values = {
         'clients': ['test']
     },
     'Stream.SetMeta': {
-        'id': 'stream'
+        'foo': 'bar'
     },
-    'Stream.SetProperty': {
-        'id': 'stream'
-    }
+    'Stream.SetProperty': 'ok'
 }
 
 
@@ -208,12 +206,12 @@ class TestSnapserver(unittest.TestCase):
     @mock.patch.object(Snapserver, '_transact', new=mock_transact('Stream.SetMeta'))
     def test_stream_setmeta(self):
         result = self._run(self.server.stream_setmeta('stream', {'foo': 'bar'}))
-        self.assertIsNone(result)
+        self.assertEqual(result, {'foo': 'bar'})
 
     @mock.patch.object(Snapserver, '_transact', new=mock_transact('Stream.SetProperty'))
     def test_stream_setproperty(self):
-        result = self._run(self.server.stream_setproperty('stream', {'foo': 'bar'}))
-        self.assertIsNone(result)
+        result = self._run(self.server.stream_setproperty('stream', 'foo', 'bar'))
+        self.assertEqual(result, 'ok')
 
     def test_synchronize(self):
         status = copy.deepcopy(return_values.get('Server.GetStatus'))
