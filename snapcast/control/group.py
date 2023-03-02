@@ -1,5 +1,4 @@
 """Snapcast group."""
-import asyncio
 import logging
 
 
@@ -7,7 +6,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 # pylint: disable=too-many-public-methods
-class Snapgroup(object):
+class Snapgroup():
     """Represents a snapcast group."""
 
     def __init__(self, server, data):
@@ -190,4 +189,4 @@ class Snapgroup(object):
 
     def __repr__(self):
         """String representation."""
-        return 'Snapgroup ({}, {})'.format(self.friendly_name, self.identifier)
+        return f'Snapgroup ({self.friendly_name}, {self.identifier})'

@@ -1,7 +1,7 @@
 """Snapcast stream."""
 
 
-class Snapstream(object):
+class Snapstream():
     """Represents a snapcast stream."""
 
     def __init__(self, data):
@@ -38,6 +38,7 @@ class Snapstream(object):
 
     @property
     def meta(self):
+        """Get metadata. Deprecated."""
         return self.metadata
 
     @property
@@ -65,7 +66,7 @@ class Snapstream(object):
 
     def __repr__(self):
         """String representation."""
-        return 'Snapstream ({})'.format(self.name)
+        return f'Snapstream ({self.name})'
 
     def callback(self):
         """Run callback."""

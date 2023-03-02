@@ -1,5 +1,4 @@
 """Snapcast client."""
-import asyncio
 import logging
 
 
@@ -7,7 +6,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 # pylint: disable=too-many-public-methods
-class Snapclient(object):
+class Snapclient():
     """Represents a snapclient."""
 
     def __init__(self, server, data):
@@ -105,7 +104,7 @@ class Snapclient(object):
 
     def groups_available(self):
         """Get available group objects."""
-        return [group for group in self._server.groups]
+        return list(self._server.groups)
 
     def update_volume(self, data):
         """Update volume."""
@@ -164,5 +163,4 @@ class Snapclient(object):
 
     def __repr__(self):
         """String representation."""
-        return 'Snapclient {} ({}, {})'.format(
-            self.version, self.friendly_name, self.identifier)
+        return f'Snapclient {self.version} ({self.friendly_name}, {self.identifier})'

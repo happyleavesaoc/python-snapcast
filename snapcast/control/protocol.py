@@ -31,9 +31,9 @@ class SnapcastProtocol(asyncio.Protocol):
         """When a connection is made."""
         self._transport = transport
 
-    def connection_lost(self, exception):
+    def connection_lost(self, exc):
         """When a connection is lost."""
-        self._callbacks.get(SERVER_ONDISCONNECT)(exception)
+        self._callbacks.get(SERVER_ONDISCONNECT)(exc)
 
     def data_received(self, data):
         """Handle received data."""

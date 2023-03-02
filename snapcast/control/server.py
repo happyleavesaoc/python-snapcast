@@ -40,10 +40,10 @@ GROUP_ONNAMECHANGED = 'Group.OnNameChanged'
 
 STREAM_ONPROPERTIES = 'Stream.OnProperties'
 STREAM_SETPROPERTY = 'Stream.SetProperty'
-STREAM_CONTROL = 'Stream.Control' #not yet implemented
-STREAM_SETMETA = 'Stream.SetMeta' #deprecated
+STREAM_CONTROL = 'Stream.Control'  # not yet implemented
+STREAM_SETMETA = 'Stream.SetMeta'  # deprecated
 STREAM_ONUPDATE = 'Stream.OnUpdate'
-STREAM_ONMETA = 'Stream.OnMetadata' #deprecated
+STREAM_ONMETA = 'Stream.OnMetadata'  # deprecated
 
 SERVER_RECONNECT_DELAY = 5
 
@@ -69,7 +69,7 @@ class ServerVersionError(NotImplementedError):
 
 
 # pylint: disable=too-many-public-methods
-class Snapserver(object):
+class Snapserver():
     """Represents a snapserver."""
 
     # pylint: disable=too-many-instance-attributes
@@ -226,14 +226,17 @@ class Snapserver(object):
         self._version_check(STREAM_SETPROPERTY)
         return self._request(STREAM_CONTROL, identifier, 'command', control_command, control_params)
 
-    def stream_setmeta(self, identifier, meta): #deprecated
+    def stream_setmeta(self, identifier, meta):  # deprecated
         """Set stream metadata."""
         return self._request(STREAM_SETMETA, identifier, 'meta', meta)
 
     def stream_setproperty(self, identifier, stream_property, value):
         """Set stream metadata."""
         self._version_check(STREAM_SETPROPERTY)
-        return self._request(STREAM_SETPROPERTY, identifier, parameters = {'property': stream_property, 'value': value})
+        return self._request(STREAM_SETPROPERTY, identifier, parameters={
+            'property': stream_property,
+            'value': value
+            })
 
     def group(self, group_identifier):
         """Get a group."""
@@ -298,10 +301,10 @@ class Snapserver(object):
         params = {'id': identifier}
         if key is not None and value is not None:
             params[key] = value
-        if type(parameters) is dict:
+        if isinstance(parameters, dict):
             params.update(parameters)
         result = await self._transact(method, params)
-        if type(result) is dict and key in result:
+        if isinstance(result, dict) and key in result:
             return result.get(key)
         return result
 
@@ -377,7 +380,7 @@ class Snapserver(object):
         """Handle client latency changed."""
         self._clients.get(data.get('id')).update_latency(data)
 
-    def _on_stream_meta(self, data): #deprecated
+    def _on_stream_meta(self, data):  # deprecated
         """Handle stream metadata update."""
         stream = self._streams[data.get('id')]
         stream.update_meta(data.get('meta'))
@@ -426,10 +429,11 @@ class Snapserver(object):
 
     def __repr__(self):
         """String representation."""
-        return 'Snapserver {} ({})'.format(self.version, self._host)
+        return f'Snapserver {self.version} ({self._host})'
 
     def _version_check(self, api_call):
         if version.parse(self.version) < version.parse(_VERSIONS.get(api_call)):
             raise ServerVersionError(
-                f"{api_call} requires server version >= {_VERSIONS[api_call]}. Current version is {self.version}"
+                f"{api_call} requires server version >= {_VERSIONS[api_call]}."
+                + f" Current version is {self.version}"
             )

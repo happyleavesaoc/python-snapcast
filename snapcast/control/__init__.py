@@ -1,6 +1,5 @@
 """Snapcast control for Snapcast 0.11.1."""
 
-import asyncio
 from snapcast.control.server import Snapserver, CONTROL_PORT
 
 
