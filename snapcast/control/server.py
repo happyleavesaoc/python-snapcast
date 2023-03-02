@@ -106,13 +106,12 @@ class Snapserver(object):
         self._on_disconnect_callback_func = None
         self._new_client_callback_func = None
 
-    @asyncio.coroutine
-    def start(self):
+    async def start(self):
         """Initiate server connection."""
         self._is_stopped = False
-        yield from self._do_connect()
+        await self._do_connect()
         _LOGGER.info('connected to snapserver on %s:%s', self._host, self._port)
-        status = yield from self.status()
+        status = await self.status()
         self.synchronize(status)
         self._on_server_connect()
 
@@ -133,35 +132,33 @@ class Snapserver(object):
         if self._transport:
             self._transport.close()
 
-    @asyncio.coroutine
-    def _do_connect(self):
+    async def _do_connect(self):
         """Perform the connection to the server."""
-        self._transport, self._protocol = yield from self._loop.create_connection(
+        self._transport, self._protocol = await self._loop.create_connection(
             lambda: SnapcastProtocol(self._callbacks), self._host, self._port)
 
     def _reconnect_cb(self):
         """Callback to reconnect to the server."""
         _LOGGER.info('try reconnect')
-        @asyncio.coroutine
-        def try_reconnect():
+
+        async def try_reconnect():
             """Actual coroutine ro try to reconnect or reschedule."""
             try:
-                yield from self._do_connect()
+                await self._do_connect()
             except OSError:
                 self._loop.call_later(SERVER_RECONNECT_DELAY,
                                       self._reconnect_cb)
             else:
-                status = yield from self.status()
+                status = await self.status()
                 self.synchronize(status)
                 self._on_server_connect()
         asyncio.ensure_future(try_reconnect())
 
-    @asyncio.coroutine
-    def _transact(self, method, params=None):
+    async def _transact(self, method, params=None):
         """Wrap requests."""
         result = error = None
         try:
-            result, error = yield from self._protocol.request(method, params)
+            result, error = await self._protocol.request(method, params)
         except:
             _LOGGER.warning('could not send request')
             error = 'could not send request'
@@ -172,21 +169,19 @@ class Snapserver(object):
         """Version."""
         return self._version
 
-    @asyncio.coroutine
-    def status(self):
+    async def status(self):
         """System status."""
-        result = yield from self._transact(SERVER_GETSTATUS)
+        result = await self._transact(SERVER_GETSTATUS)
         return result
 
     def rpc_version(self):
         """RPC version."""
         return self._transact(SERVER_GETRPCVERSION)
 
-    @asyncio.coroutine
-    def delete_client(self, identifier):
+    async def delete_client(self, identifier):
         """Delete client."""
         params = {'id': identifier}
-        response = yield from self._transact(SERVER_DELETECLIENT, params)
+        response = await self._transact(SERVER_DELETECLIENT, params)
         self.synchronize(response)
 
     def client_name(self, identifier, name):
@@ -298,15 +293,14 @@ class Snapserver(object):
         self._clients = new_clients
         self._streams = new_streams
 
-    @asyncio.coroutine
-    def _request(self, method, identifier, key=None, value=None, parameters=None):
+    async def _request(self, method, identifier, key=None, value=None, parameters=None):
         """Perform request with identifier."""
         params = {'id': identifier}
         if key is not None and value is not None:
             params[key] = value
         if type(parameters) is dict:
             params.update(parameters)
-        result = yield from self._transact(method, params)
+        result = await self._transact(method, params)
         if type(result) is dict and key in result:
             return result.get(key)
         return result

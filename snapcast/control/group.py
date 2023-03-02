@@ -31,24 +31,22 @@ class Snapgroup(object):
         """Get group name."""
         return self._group.get('name')
 
-    @asyncio.coroutine
-    def set_name(self, name):
+    async def set_name(self, name):
         """Set a group name."""
         if not name:
             name = ''
         self._group['name'] = name
-        yield from self._server.group_name(self.identifier, name)
+        await self._server.group_name(self.identifier, name)
 
     @property
     def stream(self):
         """Get stream identifier."""
         return self._group.get('stream_id')
 
-    @asyncio.coroutine
-    def set_stream(self, stream_id):
+    async def set_stream(self, stream_id):
         """Set group stream."""
         self._group['stream_id'] = stream_id
-        yield from self._server.group_stream(self.identifier, stream_id)
+        await self._server.group_stream(self.identifier, stream_id)
         _LOGGER.info('set stream to %s on %s', stream_id, self.friendly_name)
 
     @property
@@ -61,11 +59,10 @@ class Snapgroup(object):
         """Get mute status."""
         return self._group.get('muted')
 
-    @asyncio.coroutine
-    def set_muted(self, status):
+    async def set_muted(self, status):
         """Set group mute status."""
         self._group['muted'] = status
-        yield from self._server.group_mute(self.identifier, status)
+        await self._server.group_mute(self.identifier, status)
         _LOGGER.info('set muted to %s on %s', status, self.friendly_name)
 
     @property
@@ -76,8 +73,7 @@ class Snapgroup(object):
             volume_sum += self._server.client(client.get('id')).volume
         return int(volume_sum / len(self._group.get('clients')))
 
-    @asyncio.coroutine
-    def set_volume(self, volume):
+    async def set_volume(self, volume):
         """Set volume."""
         if volume not in range(0, 101):
             raise ValueError('Volume out of range')
@@ -98,7 +94,7 @@ class Snapgroup(object):
             else:
                 client_volume += ratio * (100 - client_volume)
             client_volume = round(client_volume)
-            yield from client.set_volume(client_volume, update_group=False)
+            await client.set_volume(client_volume, update_group=False)
             client.update_volume({
                 'volume': {
                     'percent': client_volume,
@@ -117,29 +113,27 @@ class Snapgroup(object):
         """Get client identifiers."""
         return [client.get('id') for client in self._group.get('clients')]
 
-    @asyncio.coroutine
-    def add_client(self, client_identifier):
+    async def add_client(self, client_identifier):
         """Add a client."""
         if client_identifier in self.clients:
             _LOGGER.error('%s already in group %s', client_identifier, self.identifier)
             return
         new_clients = self.clients
         new_clients.append(client_identifier)
-        yield from self._server.group_clients(self.identifier, new_clients)
+        await self._server.group_clients(self.identifier, new_clients)
         _LOGGER.info('added %s to %s', client_identifier, self.identifier)
-        status = yield from self._server.status()
+        status = await self._server.status()
         self._server.synchronize(status)
         self._server.client(client_identifier).callback()
         self.callback()
 
-    @asyncio.coroutine
-    def remove_client(self, client_identifier):
+    async def remove_client(self, client_identifier):
         """Remove a client."""
         new_clients = self.clients
         new_clients.remove(client_identifier)
-        yield from self._server.group_clients(self.identifier, new_clients)
+        await self._server.group_clients(self.identifier, new_clients)
         _LOGGER.info('removed %s from %s', client_identifier, self.identifier)
-        status = yield from self._server.status()
+        status = await self._server.status()
         self._server.synchronize(status)
         self._server.client(client_identifier).callback()
         self.callback()
@@ -175,14 +169,13 @@ class Snapgroup(object):
         }
         _LOGGER.info('took snapshot of current state of %s', self.friendly_name)
 
-    @asyncio.coroutine
-    def restore(self):
+    async def restore(self):
         """Restore snapshotted state."""
         if not self._snapshot:
             return
-        yield from self.set_muted(self._snapshot['muted'])
-        yield from self.set_volume(self._snapshot['volume'])
-        yield from self.set_stream(self._snapshot['stream'])
+        await self.set_muted(self._snapshot['muted'])
+        await self.set_volume(self._snapshot['volume'])
+        await self.set_stream(self._snapshot['stream'])
         self.callback()
         _LOGGER.info('restored snapshot of state of %s', self.friendly_name)
 

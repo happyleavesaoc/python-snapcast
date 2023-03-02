@@ -68,13 +68,12 @@ class SnapcastProtocol(asyncio.Protocol):
         if data.get('method') in self._callbacks:
             self._callbacks.get(data.get('method'))(data.get('params'))
 
-    @asyncio.coroutine
-    def request(self, method, params):
+    async def request(self, method, params):
         """Send a JSONRPC request."""
         identifier = random.randint(1, 1000)
         self._transport.write(jsonrpc_request(method, identifier, params))
         self._buffer[identifier] = {'flag': asyncio.Event()}
-        yield from self._buffer[identifier]['flag'].wait()
+        await self._buffer[identifier]['flag'].wait()
         result = self._buffer[identifier]['data']
         error = self._buffer[identifier]['error']
         del self._buffer[identifier]['data']

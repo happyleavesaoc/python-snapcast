@@ -2,7 +2,7 @@ import asyncio
 import copy
 import unittest
 from unittest import mock
-from helpers import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 
 from snapcast.control.server import Snapserver
 from snapcast.control import create_server
@@ -135,11 +135,11 @@ def mock_transact(key):
 class TestSnapserver(unittest.TestCase):
 
     def _run(self, coro):
-        return self.loop.run_until_complete(coro)
+        return asyncio.run(coro)
 
     @mock.patch.object(Snapserver, 'start', new=AsyncMock())
     def setUp(self):
-        self.loop = asyncio.get_event_loop()
+        self.loop = MagicMock()
         self.server = self._run(create_server(self.loop, 'abcd'))
         self.server.synchronize(return_values.get('Server.GetStatus'))
 
