@@ -1,6 +1,6 @@
 import unittest
 from unittest import mock
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, AsyncMock
 from helpers import async_run
 
 from snapcast.control.client import Snapclient
@@ -28,7 +28,11 @@ class TestSnapclient(unittest.TestCase):
             },
             'connected': True
         }
-        server = MagicMock()
+        server = AsyncMock()
+        server.synchronize = MagicMock()
+        group = AsyncMock()
+        group.callback = MagicMock()
+        server.group = MagicMock(return_value=group)
         server.groups = ['test_group']
         self.client = Snapclient(server, data)
 

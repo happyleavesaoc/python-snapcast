@@ -1,5 +1,4 @@
 """Snapcast client."""
-import asyncio
 import logging
 
 
@@ -7,7 +6,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 # pylint: disable=too-many-public-methods
-class Snapclient(object):
+class Snapclient():
     """Represents a snapclient."""
 
     def __init__(self, server, data):
@@ -56,37 +55,34 @@ class Snapclient(object):
         """Name."""
         return self._client.get('config').get('name')
 
-    @asyncio.coroutine
-    def set_name(self, name):
+    async def set_name(self, name):
         """Set a client name."""
         if not name:
             name = ''
         self._client['config']['name'] = name
-        yield from self._server.client_name(self.identifier, name)
+        await self._server.client_name(self.identifier, name)
 
     @property
     def latency(self):
         """Latency."""
         return self._client.get('config').get('latency')
 
-    @asyncio.coroutine
-    def set_latency(self, latency):
+    async def set_latency(self, latency):
         """Set client latency."""
         self._client['config']['latency'] = latency
-        yield from self._server.client_latency(self.identifier, latency)
+        await self._server.client_latency(self.identifier, latency)
 
     @property
     def muted(self):
         """Muted or not."""
         return self._client.get('config').get('volume').get('muted')
 
-    @asyncio.coroutine
-    def set_muted(self, status):
+    async def set_muted(self, status):
         """Set client mute status."""
         new_volume = self._client['config']['volume']
         new_volume['muted'] = status
         self._client['config']['volume']['muted'] = status
-        yield from self._server.client_volume(self.identifier, new_volume)
+        await self._server.client_volume(self.identifier, new_volume)
         _LOGGER.info('set muted to %s on %s', status, self.friendly_name)
 
     @property
@@ -94,22 +90,21 @@ class Snapclient(object):
         """Volume percent."""
         return self._client.get('config').get('volume').get('percent')
 
-    @asyncio.coroutine
-    def set_volume(self, percent, update_group=True):
+    async def set_volume(self, percent, update_group=True):
         """Set client volume percent."""
         if percent not in range(0, 101):
             raise ValueError('Volume percent out of range')
         new_volume = self._client['config']['volume']
         new_volume['percent'] = percent
         self._client['config']['volume']['percent'] = percent
-        yield from self._server.client_volume(self.identifier, new_volume)
+        await self._server.client_volume(self.identifier, new_volume)
         if update_group:
             self._server.group(self.group.identifier).callback()
         _LOGGER.info('set volume to %s on %s', percent, self.friendly_name)
 
     def groups_available(self):
         """Get available group objects."""
-        return [group for group in self._server.groups]
+        return list(self._server.groups)
 
     def update_volume(self, data):
         """Update volume."""
@@ -146,15 +141,14 @@ class Snapclient(object):
         }
         _LOGGER.info('took snapshot of current state of %s', self.friendly_name)
 
-    @asyncio.coroutine
-    def restore(self):
+    async def restore(self):
         """Restore snapshotted state."""
         if not self._snapshot:
             return
-        yield from self.set_name(self._snapshot['name'])
-        yield from self.set_volume(self._snapshot['volume'])
-        yield from self.set_muted(self._snapshot['muted'])
-        yield from self.set_latency(self._snapshot['latency'])
+        await self.set_name(self._snapshot['name'])
+        await self.set_volume(self._snapshot['volume'])
+        await self.set_muted(self._snapshot['muted'])
+        await self.set_latency(self._snapshot['latency'])
         self.callback()
         _LOGGER.info('restored snapshot of state of %s', self.friendly_name)
 
@@ -169,5 +163,4 @@ class Snapclient(object):
 
     def __repr__(self):
         """String representation."""
-        return 'Snapclient {} ({}, {})'.format(
-            self.version, self.friendly_name, self.identifier)
+        return f'Snapclient {self.version} ({self.friendly_name}, {self.identifier})'

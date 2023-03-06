@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, AsyncMock
 from helpers import async_run
 
 from snapcast.control.group import Snapgroup
@@ -18,12 +18,15 @@ class TestSnapgroup(unittest.TestCase):
                 {'id': 'b'}
             ]
         }
-        server = MagicMock()
+        server = AsyncMock()
+        server.synchronize = MagicMock()
         stream = MagicMock()
         stream.friendly_name = 'test stream'
         stream.status = 'playing'
-        client = MagicMock()
+        client = AsyncMock()
         client.volume = 50
+        client.callback = MagicMock()
+        client.update_volume = MagicMock()
         server.streams = [stream]
         server.stream = MagicMock(return_value=stream)
         server.client = MagicMock(return_value=client)
@@ -61,11 +64,11 @@ class TestSnapgroup(unittest.TestCase):
         self.assertEqual(self.group.name, 'test')
 
     def test_add_client(self):
-        self.group.add_client('c')
+        async_run(self.group.add_client('c'))
         # TODO: add assert
 
     def test_remove_client(self):
-        self.group.remove_client('a')
+        async_run(self.group.remove_client('a'))
         # TODO: add assert
 
     def test_streams_by_name(self):

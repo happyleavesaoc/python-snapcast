@@ -2,7 +2,7 @@ import asyncio
 import copy
 import unittest
 from unittest import mock
-from helpers import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 
 from snapcast.control.server import Snapserver
 from snapcast.control import create_server
@@ -122,11 +122,9 @@ return_values = {
         'clients': ['test']
     },
     'Stream.SetMeta': {
-        'id': 'stream'
+        'foo': 'bar'
     },
-    'Stream.SetProperty': {
-        'id': 'stream'
-    }
+    'Stream.SetProperty': 'ok'
 }
 
 
@@ -137,11 +135,11 @@ def mock_transact(key):
 class TestSnapserver(unittest.TestCase):
 
     def _run(self, coro):
-        return self.loop.run_until_complete(coro)
+        return asyncio.run(coro)
 
     @mock.patch.object(Snapserver, 'start', new=AsyncMock())
     def setUp(self):
-        self.loop = asyncio.get_event_loop()
+        self.loop = MagicMock()
         self.server = self._run(create_server(self.loop, 'abcd'))
         self.server.synchronize(return_values.get('Server.GetStatus'))
 
@@ -208,12 +206,12 @@ class TestSnapserver(unittest.TestCase):
     @mock.patch.object(Snapserver, '_transact', new=mock_transact('Stream.SetMeta'))
     def test_stream_setmeta(self):
         result = self._run(self.server.stream_setmeta('stream', {'foo': 'bar'}))
-        self.assertIsNone(result)
+        self.assertEqual(result, {'foo': 'bar'})
 
     @mock.patch.object(Snapserver, '_transact', new=mock_transact('Stream.SetProperty'))
     def test_stream_setproperty(self):
-        result = self._run(self.server.stream_setproperty('stream', {'foo': 'bar'}))
-        self.assertIsNone(result)
+        result = self._run(self.server.stream_setproperty('stream', 'foo', 'bar'))
+        self.assertEqual(result, 'ok')
 
     def test_synchronize(self):
         status = copy.deepcopy(return_values.get('Server.GetStatus'))
