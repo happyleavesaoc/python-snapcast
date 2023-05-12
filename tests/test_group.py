@@ -27,6 +27,7 @@ class TestSnapgroup(unittest.TestCase):
         client.volume = 50
         client.callback = MagicMock()
         client.update_volume = MagicMock()
+        client.friendly_name = 'A'
         server.streams = [stream]
         server.stream = MagicMock(return_value=stream)
         server.client = MagicMock(return_value=client)
@@ -35,7 +36,7 @@ class TestSnapgroup(unittest.TestCase):
     def test_init(self):
         self.assertEqual(self.group.identifier, 'test')
         self.assertEqual(self.group.name, '')
-        self.assertEqual(self.group.friendly_name, 'test stream')
+        self.assertEqual(self.group.friendly_name, 'A+A')
         self.assertEqual(self.group.stream, 'test stream')
         self.assertEqual(self.group.muted, False)
         self.assertEqual(self.group.volume, 50)

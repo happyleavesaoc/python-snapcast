@@ -105,7 +105,8 @@ class Snapgroup():
     @property
     def friendly_name(self):
         """Get friendly name."""
-        return self.name if self.name != '' else self.stream
+        return self.name if self.name != '' else "+".join(
+            sorted([self._server.client(c).friendly_name for c in self.clients]))
 
     @property
     def clients(self):
