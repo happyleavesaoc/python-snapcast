@@ -46,7 +46,7 @@ class Snapgroup():
         """Set group stream."""
         self._group['stream_id'] = stream_id
         await self._server.group_stream(self.identifier, stream_id)
-        _LOGGER.info('set stream to %s on %s', stream_id, self.friendly_name)
+        _LOGGER.debug('set stream to %s on %s', stream_id, self.friendly_name)
 
     @property
     def stream_status(self):
@@ -62,7 +62,7 @@ class Snapgroup():
         """Set group mute status."""
         self._group['muted'] = status
         await self._server.group_mute(self.identifier, status)
-        _LOGGER.info('set muted to %s on %s', status, self.friendly_name)
+        _LOGGER.debug('set muted to %s on %s', status, self.friendly_name)
 
     @property
     def volume(self):
@@ -78,7 +78,7 @@ class Snapgroup():
             raise ValueError('Volume out of range')
         current_volume = self.volume
         if volume == current_volume:
-            _LOGGER.info('left volume at %s on group %s', volume, self.friendly_name)
+            _LOGGER.debug('left volume at %s on group %s', volume, self.friendly_name)
             return
         delta = volume - current_volume
         if delta < 0:
@@ -100,7 +100,7 @@ class Snapgroup():
                     'muted': client.muted
                 }
             })
-        _LOGGER.info('set volume to %s on group %s', volume, self.friendly_name)
+        _LOGGER.debug('set volume to %s on group %s', volume, self.friendly_name)
 
     @property
     def friendly_name(self):
@@ -121,7 +121,7 @@ class Snapgroup():
         new_clients = self.clients
         new_clients.append(client_identifier)
         await self._server.group_clients(self.identifier, new_clients)
-        _LOGGER.info('added %s to %s', client_identifier, self.identifier)
+        _LOGGER.debug('added %s to %s', client_identifier, self.identifier)
         status = await self._server.status()
         self._server.synchronize(status)
         self._server.client(client_identifier).callback()
@@ -132,7 +132,7 @@ class Snapgroup():
         new_clients = self.clients
         new_clients.remove(client_identifier)
         await self._server.group_clients(self.identifier, new_clients)
-        _LOGGER.info('removed %s from %s', client_identifier, self.identifier)
+        _LOGGER.debug('removed %s from %s', client_identifier, self.identifier)
         status = await self._server.status()
         self._server.synchronize(status)
         self._server.client(client_identifier).callback()
@@ -146,19 +146,19 @@ class Snapgroup():
         """Update mute."""
         self._group['muted'] = data['mute']
         self.callback()
-        _LOGGER.info('updated mute on %s', self.friendly_name)
+        _LOGGER.debug('updated mute on %s', self.friendly_name)
 
     def update_name(self, data):
         """Update name."""
         self._group['name'] = data['name']
-        _LOGGER.info('updated name on %s', self.name)
+        _LOGGER.debug('updated name on %s', self.name)
         self.callback()
 
     def update_stream(self, data):
         """Update stream."""
         self._group['stream_id'] = data['stream_id']
         self.callback()
-        _LOGGER.info('updated stream to %s on %s', self.stream, self.friendly_name)
+        _LOGGER.debug('updated stream to %s on %s', self.stream, self.friendly_name)
 
     def snapshot(self):
         """Snapshot current state."""
@@ -167,7 +167,7 @@ class Snapgroup():
             'volume': self.volume,
             'stream': self.stream
         }
-        _LOGGER.info('took snapshot of current state of %s', self.friendly_name)
+        _LOGGER.debug('took snapshot of current state of %s', self.friendly_name)
 
     async def restore(self):
         """Restore snapshotted state."""
@@ -177,7 +177,7 @@ class Snapgroup():
         await self.set_volume(self._snapshot['volume'])
         await self.set_stream(self._snapshot['stream'])
         self.callback()
-        _LOGGER.info('restored snapshot of state of %s', self.friendly_name)
+        _LOGGER.debug('restored snapshot of state of %s', self.friendly_name)
 
     def callback(self):
         """Run callback."""
