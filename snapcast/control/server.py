@@ -110,7 +110,7 @@ class Snapserver():
         """Initiate server connection."""
         self._is_stopped = False
         await self._do_connect()
-        _LOGGER.info('connected to snapserver on %s:%s', self._host, self._port)
+        _LOGGER.debug('connected to snapserver on %s:%s', self._host, self._port)
         status = await self.status()
         self.synchronize(status)
         self._on_server_connect()
@@ -119,7 +119,7 @@ class Snapserver():
         """Stop server."""
         self._is_stopped = True
         self._do_disconnect()
-        _LOGGER.info('disconnected from snapserver on %s:%s', self._host, self._port)
+        _LOGGER.debug('disconnected from snapserver on %s:%s', self._host, self._port)
         self._clients = {}
         self._streams = {}
         self._groups = {}
@@ -139,7 +139,7 @@ class Snapserver():
 
     def _reconnect_cb(self):
         """Callback to reconnect to the server."""
-        _LOGGER.info('try reconnect')
+        _LOGGER.debug('try reconnect')
 
         async def try_reconnect():
             """Actual coroutine ro try to reconnect or reschedule."""
@@ -310,13 +310,13 @@ class Snapserver():
 
     def _on_server_connect(self):
         """Handle server connection."""
-        _LOGGER.info('Server connected')
+        _LOGGER.debug('Server connected')
         if self._on_connect_callback_func and callable(self._on_connect_callback_func):
             self._on_connect_callback_func()
 
     def _on_server_disconnect(self, exception):
         """Handle server disconnection."""
-        _LOGGER.info('Server disconnected')
+        _LOGGER.debug('Server disconnected')
         if self._on_disconnect_callback_func and callable(self._on_disconnect_callback_func):
             self._on_disconnect_callback_func(exception)
         if not self._is_stopped:
@@ -361,12 +361,12 @@ class Snapserver():
             self._clients[data.get('id')] = client
             if self._new_client_callback_func and callable(self._new_client_callback_func):
                 self._new_client_callback_func(client)
-        _LOGGER.info('client %s connected', client.friendly_name)
+        _LOGGER.debug('client %s connected', client.friendly_name)
 
     def _on_client_disconnect(self, data):
         """Handle client disconnect."""
         self._clients[data.get('id')].update_connected(False)
-        _LOGGER.info('client %s disconnected', self._clients[data.get('id')].friendly_name)
+        _LOGGER.debug('client %s disconnected', self._clients[data.get('id')].friendly_name)
 
     def _on_client_volume_changed(self, data):
         """Handle client volume change."""
@@ -384,7 +384,7 @@ class Snapserver():
         """Handle stream metadata update."""
         stream = self._streams[data.get('id')]
         stream.update_meta(data.get('meta'))
-        _LOGGER.info('stream %s metadata updated', stream.friendly_name)
+        _LOGGER.debug('stream %s metadata updated', stream.friendly_name)
         for group in self._groups.values():
             if group.stream == data.get('id'):
                 group.callback()
@@ -393,7 +393,7 @@ class Snapserver():
         """Handle stream properties update."""
         stream = self._streams[data.get('id')]
         stream.update_properties(data.get('properties'))
-        _LOGGER.info('stream %s properties updated', stream.friendly_name)
+        _LOGGER.debug('stream %s properties updated', stream.friendly_name)
         for group in self._groups.values():
             if group.stream == data.get('id'):
                 group.callback()
@@ -403,7 +403,7 @@ class Snapserver():
     def _on_stream_update(self, data):
         """Handle stream update."""
         self._streams[data.get('id')].update(data.get('stream'))
-        _LOGGER.info('stream %s updated', self._streams[data.get('id')].friendly_name)
+        _LOGGER.debug('stream %s updated', self._streams[data.get('id')].friendly_name)
         self._streams[data.get("id")].callback()
         for group in self._groups.values():
             if group.stream == data.get('id'):

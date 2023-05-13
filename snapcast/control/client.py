@@ -83,7 +83,7 @@ class Snapclient():
         new_volume['muted'] = status
         self._client['config']['volume']['muted'] = status
         await self._server.client_volume(self.identifier, new_volume)
-        _LOGGER.info('set muted to %s on %s', status, self.friendly_name)
+        _LOGGER.debug('set muted to %s on %s', status, self.friendly_name)
 
     @property
     def volume(self):
@@ -100,7 +100,7 @@ class Snapclient():
         await self._server.client_volume(self.identifier, new_volume)
         if update_group:
             self._server.group(self.group.identifier).callback()
-        _LOGGER.info('set volume to %s on %s', percent, self.friendly_name)
+        _LOGGER.debug('set volume to %s on %s', percent, self.friendly_name)
 
     def groups_available(self):
         """Get available group objects."""
@@ -109,26 +109,26 @@ class Snapclient():
     def update_volume(self, data):
         """Update volume."""
         self._client['config']['volume'] = data['volume']
-        _LOGGER.info('updated volume on %s', self.friendly_name)
+        _LOGGER.debug('updated volume on %s', self.friendly_name)
         self._server.group(self.group.identifier).callback()
         self.callback()
 
     def update_name(self, data):
         """Update name."""
         self._client['config']['name'] = data['name']
-        _LOGGER.info('updated name on %s', self.friendly_name)
+        _LOGGER.debug('updated name on %s', self.friendly_name)
         self.callback()
 
     def update_latency(self, data):
         """Update latency."""
         self._client['config']['latency'] = data['latency']
-        _LOGGER.info('updated latency on %s', self.friendly_name)
+        _LOGGER.debug('updated latency on %s', self.friendly_name)
         self.callback()
 
     def update_connected(self, status):
         """Update connected."""
         self._client['connected'] = status
-        _LOGGER.info('updated connected status to %s on %s', status, self.friendly_name)
+        _LOGGER.debug('updated connected status to %s on %s', status, self.friendly_name)
         self.callback()
 
     def snapshot(self):
@@ -139,7 +139,7 @@ class Snapclient():
             'muted': self.muted,
             'latency': self.latency
         }
-        _LOGGER.info('took snapshot of current state of %s', self.friendly_name)
+        _LOGGER.debug('took snapshot of current state of %s', self.friendly_name)
 
     async def restore(self):
         """Restore snapshotted state."""
@@ -150,7 +150,7 @@ class Snapclient():
         await self.set_muted(self._snapshot['muted'])
         await self.set_latency(self._snapshot['latency'])
         self.callback()
-        _LOGGER.info('restored snapshot of state of %s', self.friendly_name)
+        _LOGGER.debug('restored snapshot of state of %s', self.friendly_name)
 
     def callback(self):
         """Run callback."""
