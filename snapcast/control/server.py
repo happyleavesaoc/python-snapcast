@@ -45,7 +45,7 @@ STREAM_SETMETA = 'Stream.SetMeta'  # deprecated
 STREAM_ONUPDATE = 'Stream.OnUpdate'
 STREAM_ONMETA = 'Stream.OnMetadata'  # deprecated
 STREAM_ADDSTREAM = 'Stream.AddStream' 
-STREAM_REMOVESTREAM = 'Stream.RemoveStream'
+STREAM_REMOVESTREAM = 'Stream.RemoveStream' 
 
 SERVER_RECONNECT_DELAY = 5
 
@@ -243,9 +243,9 @@ class Snapserver():
             'value': value
             })
 
-    async def stream_add_stream(self, streamUri):
+    async def stream_add_stream(self, stream_uri):
         """Add a stream."""
-        params = {"streamUri" : streamUri}
+        params = {"streamUri" : stream_uri}
         result = await self._transact(STREAM_ADDSTREAM, params)
         status = await self.status()
         self._on_server_update(status)
