@@ -2,16 +2,19 @@
 
 import asyncio
 import logging
+import websockets   
 
 from packaging import version
 from snapcast.control.client import Snapclient
 from snapcast.control.group import Snapgroup
 from snapcast.control.protocol import SERVER_ONDISCONNECT, SnapcastProtocol
+from snapcast.control.wsprotocol import SERVER_ONDISCONNECT, SnapcastWebSocketProtocol
 from snapcast.control.stream import Snapstream
 
 _LOGGER = logging.getLogger(__name__)
 
 CONTROL_PORT = 1705
+WEBSOCKET_PORT = 1780
 
 SERVER_GETSTATUS = 'Server.GetStatus'
 SERVER_GETRPCVERSION = 'Server.GetRPCVersion'
@@ -73,9 +76,10 @@ class Snapserver():
     """Represents a snapserver."""
 
     # pylint: disable=too-many-instance-attributes
-    def __init__(self, loop, host, port=CONTROL_PORT, reconnect=False):
+    def __init__(self, loop, host, port=CONTROL_PORT, reconnect=False, use_websockets=False):
         """Initialize."""
         self._loop = loop
+        self._use_websockets = use_websockets
         self._port = port
         self._reconnect = reconnect
         self._is_stopped = True
@@ -86,6 +90,7 @@ class Snapserver():
         self._version = None
         self._protocol = None
         self._transport = None
+        self._websocket = None
         self._callbacks = {
             CLIENT_ONCONNECT: self._on_client_connect,
             CLIENT_ONDISCONNECT: self._on_client_disconnect,
@@ -128,13 +133,38 @@ class Snapserver():
         self._transport = None
 
     def _do_disconnect(self):
-        """Perform the connection to the server."""
+        """Disconnect from server."""
         if self._transport:
             self._transport.close()
 
     async def _do_connect(self):
         """Perform the connection to the server."""
-        self._transport, self._protocol = await self._loop.create_connection(
+
+        connected = asyncio.Event()
+        # actual corutine to handle websocket connection
+        async def websocket_handler():
+            _LOGGER.debug('try connect to websocket')
+            async for self._websocket in websockets.connect(uri=f"ws://{self._host}:{self._port}/jsonrpc"):
+                self._protocol = SnapcastWebSocketProtocol(self._websocket, self._callbacks)
+                connected.set()
+                try:
+                    # Receives the replies.
+                    async for message in self._websocket:
+                        self._protocol.message_received(message)
+                except websockets.ConnectionClosed:
+                    if self._reconnect and not self._is_stopped:
+                        _LOGGER.debug('try reconnect to websocket')
+                        continue
+                    else:
+                        pass
+                # Closes the connection.
+                await self._websocket.close()
+
+        if self._use_websockets:
+            self._loop.create_task(websocket_handler())
+            await connected.wait()
+        else:
+            self._transport, self._protocol = await self._loop.create_connection(
             lambda: SnapcastProtocol(self._callbacks), self._host, self._port)
 
     def _reconnect_cb(self):
