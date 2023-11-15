@@ -4,14 +4,15 @@ setup(
     name='snapcast',
     version='2.3.3',
     description='Control Snapcast.',
-    url='https://github.com/happyleavesaoc/python-snapcast/',
+    url='https://github.com/arpena/python-snapcast/',
     license='MIT',
     author='happyleaves',
-    author_email='happyleaves.tfr@gmail.com',
+    author_email='arpena@gmail.com',
     packages=['snapcast', 'snapcast.control', 'snapcast.client'],
     install_requires=[
         'construct>=2.5.2',
         'packaging',
+        'websockets',
     ],
     classifiers=[
         'License :: OSI Approved :: MIT License',
