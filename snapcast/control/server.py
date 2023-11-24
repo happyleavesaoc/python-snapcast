@@ -2,13 +2,13 @@
 
 import asyncio
 import logging
-import websockets   
+import websockets
 
 from packaging import version
 from snapcast.control.client import Snapclient
 from snapcast.control.group import Snapgroup
 from snapcast.control.protocol import SERVER_ONDISCONNECT, SnapcastProtocol
-from snapcast.control.wsprotocol import SERVER_ONDISCONNECT, SnapcastWebSocketProtocol
+from snapcast.control.wsprotocol import SnapcastWebSocketProtocol
 from snapcast.control.stream import Snapstream
 
 _LOGGER = logging.getLogger(__name__)
@@ -68,6 +68,8 @@ _VERSIONS = {
 
 
 class ServerVersionError(NotImplementedError):
+    """Server Version Error, not implemented."""
+
     pass
 
 
@@ -75,7 +77,7 @@ class ServerVersionError(NotImplementedError):
 class Snapserver():
     """Represents a snapserver."""
 
-    # pylint: disable=too-many-instance-attributes
+    # pylint: disable=too-many-instance-attributes,too-many-arguments
     def __init__(self, loop, host, port=CONTROL_PORT, reconnect=False, use_websockets=False):
         """Initialize."""
         self._loop = loop
@@ -139,12 +141,13 @@ class Snapserver():
 
     async def _do_connect(self):
         """Perform the connection to the server."""
-
         connected = asyncio.Event()
+
         # actual corutine to handle websocket connection
         async def websocket_handler():
             _LOGGER.debug('try connect to websocket')
-            async for self._websocket in websockets.connect(uri=f"ws://{self._host}:{self._port}/jsonrpc"):
+            async for self._websocket in websockets.connect(
+                        uri=f"ws://{self._host}:{self._port}/jsonrpc"):
                 self._protocol = SnapcastWebSocketProtocol(self._websocket, self._callbacks)
                 connected.set()
                 try:
@@ -155,8 +158,6 @@ class Snapserver():
                     if self._reconnect and not self._is_stopped:
                         _LOGGER.debug('try reconnect to websocket')
                         continue
-                    else:
-                        pass
                 # Closes the connection.
                 await self._websocket.close()
 
@@ -165,7 +166,7 @@ class Snapserver():
             await connected.wait()
         else:
             self._transport, self._protocol = await self._loop.create_connection(
-            lambda: SnapcastProtocol(self._callbacks), self._host, self._port)
+                lambda: SnapcastProtocol(self._callbacks), self._host, self._port)
 
     def _reconnect_cb(self):
         """Callback to reconnect to the server."""
@@ -366,8 +367,8 @@ class Snapserver():
         """Handle group mute."""
         group = self._groups.get(data.get('id'))
         group.update_mute(data)
-        for clientID in group.clients:
-            self._clients.get(clientID).callback()
+        for client_id in group.clients:
+            self._clients.get(client_id).callback()
 
     def _on_group_name_changed(self, data):
         """Handle group name changed."""
@@ -377,8 +378,8 @@ class Snapserver():
         """Handle group stream change."""
         group = self._groups.get(data.get('id'))
         group.update_stream(data)
-        for clientID in group.clients:
-            self._clients.get(clientID).callback()
+        for client_id in group.clients:
+            self._clients.get(client_id).callback()
 
     def _on_client_connect(self, data):
         """Handle client connect."""
@@ -427,8 +428,8 @@ class Snapserver():
         for group in self._groups.values():
             if group.stream == data.get('id'):
                 group.callback()
-                for clientID in group.clients:
-                    self._clients.get(clientID).callback()
+                for client_id in group.clients:
+                    self._clients.get(client_id).callback()
 
     def _on_stream_update(self, data):
         """Handle stream update."""
@@ -438,8 +439,8 @@ class Snapserver():
         for group in self._groups.values():
             if group.stream == data.get('id'):
                 group.callback()
-                for clientID in group.clients:
-                    self._clients.get(clientID).callback()
+                for client_id in group.clients:
+                    self._clients.get(client_id).callback()
 
     def set_on_update_callback(self, func):
         """Set on update callback function."""
@@ -458,7 +459,7 @@ class Snapserver():
         self._new_client_callback_func = func
 
     def __repr__(self):
-        """String representation."""
+        """Return string representation."""
         return f'Snapserver {self.version} ({self._host})'
 
     def _version_check(self, api_call):

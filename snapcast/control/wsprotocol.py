@@ -30,9 +30,9 @@ class SnapcastWebSocketProtocol():
         """Handle received data."""
         data = json.loads(message)
         if not isinstance(data, list):
-           data = [data]
+            data = [data]
         for item in data:
-           self.handle_data(item)
+            self.handle_data(item)
 
     def handle_data(self, data):
         """Handle JSONRPC data."""
