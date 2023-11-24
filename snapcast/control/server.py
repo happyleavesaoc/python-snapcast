@@ -2,13 +2,13 @@
 
 import asyncio
 import logging
-import websockets   
+import websockets
 
 from packaging import version
 from snapcast.control.client import Snapclient
 from snapcast.control.group import Snapgroup
 from snapcast.control.protocol import SERVER_ONDISCONNECT, SnapcastProtocol
-from snapcast.control.wsprotocol import SERVER_ONDISCONNECT, SnapcastWebSocketProtocol
+from snapcast.control.wsprotocol import SnapcastWebSocketProtocol
 from snapcast.control.stream import Snapstream
 
 _LOGGER = logging.getLogger(__name__)
@@ -74,13 +74,18 @@ _VERSIONS = {
 
 class ServerVersionError(NotImplementedError):
     """Server Version Error, not implemented."""
+<<<<<<< HEAD
+=======
+
+    pass
+>>>>>>> 7ae0f1b (Corrected some pylint warnings and errors)
 
 
 # pylint: disable=too-many-public-methods
 class Snapserver():
     """Represents a snapserver."""
 
-    # pylint: disable=too-many-instance-attributes
+    # pylint: disable=too-many-instance-attributes,too-many-arguments
     def __init__(self, loop, host, port=CONTROL_PORT, reconnect=False, use_websockets=False):
         """Initialize."""
         self._loop = loop
@@ -146,12 +151,13 @@ class Snapserver():
 
     async def _do_connect(self):
         """Perform the connection to the server."""
-
         connected = asyncio.Event()
+
         # actual corutine to handle websocket connection
         async def websocket_handler():
             _LOGGER.debug('try connect to websocket')
-            async for self._websocket in websockets.connect(uri=f"ws://{self._host}:{self._port}/jsonrpc"):
+            async for self._websocket in websockets.connect(
+                        uri=f"ws://{self._host}:{self._port}/jsonrpc"):
                 self._protocol = SnapcastWebSocketProtocol(self._websocket, self._callbacks)
                 connected.set()
                 try:
@@ -162,8 +168,6 @@ class Snapserver():
                     if self._reconnect and not self._is_stopped:
                         _LOGGER.debug('try reconnect to websocket')
                         continue
-                    else:
-                        pass
                 # Closes the connection.
                 await self._websocket.close()
 
@@ -172,7 +176,7 @@ class Snapserver():
             await connected.wait()
         else:
             self._transport, self._protocol = await self._loop.create_connection(
-            lambda: SnapcastProtocol(self._callbacks), self._host, self._port)
+                lambda: SnapcastProtocol(self._callbacks), self._host, self._port)
 
     def _reconnect_cb(self):
         """Try to reconnect to the server."""
@@ -456,6 +460,7 @@ class Snapserver():
 
     def _on_stream_update(self, data):
         """Handle stream update."""
+<<<<<<< HEAD
         if data.get('id') in self._streams:
             self._streams[data.get('id')].update(data.get('stream'))
             _LOGGER.debug('stream %s updated', self._streams[data.get('id')].friendly_name)
@@ -474,6 +479,16 @@ class Snapserver():
                 async def async_sync():
                     self.synchronize((await self.status())[0])
                 asyncio.ensure_future(async_sync())
+=======
+        self._streams[data.get('id')].update(data.get('stream'))
+        _LOGGER.debug('stream %s updated', self._streams[data.get('id')].friendly_name)
+        self._streams[data.get("id")].callback()
+        for group in self._groups.values():
+            if group.stream == data.get('id'):
+                group.callback()
+                for client_id in group.clients:
+                    self._clients.get(client_id).callback()
+>>>>>>> 7ae0f1b (Corrected some pylint warnings and errors)
 
     def set_on_update_callback(self, func):
         """Set on update callback function."""
