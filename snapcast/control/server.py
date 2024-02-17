@@ -284,7 +284,6 @@ class Snapserver():
                 new_groups[group.get('id')].update(group)
             else:
                 new_groups[group.get('id')] = Snapgroup(self, group)
-            _LOGGER.debug('group found: %s', new_groups[group.get('id')])
             for client in group.get('clients'):
                 if client.get('id') in self._clients:
                     new_clients[client.get('id')] = self._clients[client.get('id')]
@@ -292,6 +291,7 @@ class Snapserver():
                 else:
                     new_clients[client.get('id')] = Snapclient(self, client)
                 _LOGGER.debug('client found: %s', new_clients[client.get('id')])
+            _LOGGER.debug('group found: %s', new_groups[group.get('id')])
         self._groups = new_groups
         self._clients = new_clients
         self._streams = new_streams

@@ -28,20 +28,25 @@ class TestSnapgroup(unittest.TestCase):
         client.callback = MagicMock()
         client.update_volume = MagicMock()
         client.friendly_name = 'A'
+        client.identifier = 'a'
         server.streams = [stream]
         server.stream = MagicMock(return_value=stream)
         server.client = MagicMock(return_value=client)
+        server.clients = [client]
         self.group = Snapgroup(server, data)
 
     def test_init(self):
         self.assertEqual(self.group.identifier, 'test')
         self.assertEqual(self.group.name, '')
-        self.assertEqual(self.group.friendly_name, 'A+A')
+        self.assertEqual(self.group.friendly_name, 'A')
         self.assertEqual(self.group.stream, 'test stream')
         self.assertEqual(self.group.muted, False)
         self.assertEqual(self.group.volume, 50)
         self.assertEqual(self.group.clients, ['a', 'b'])
         self.assertEqual(self.group.stream_status, 'playing')
+
+    def test_repr(self):
+        self.assertEqual(self.group.__repr__(), 'Snapgroup (A, test)')
 
     def test_update(self):
         self.group.update({
