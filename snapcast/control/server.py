@@ -402,14 +402,21 @@ class Snapserver():
 
     def _on_stream_update(self, data):
         """Handle stream update."""
-        self._streams[data.get('id')].update(data.get('stream'))
-        _LOGGER.debug('stream %s updated', self._streams[data.get('id')].friendly_name)
-        self._streams[data.get("id")].callback()
-        for group in self._groups.values():
-            if group.stream == data.get('id'):
-                group.callback()
-                for clientID in group.clients:
-                    self._clients.get(clientID).callback()
+        if data.get('id') in self._streams:
+            self._streams[data.get('id')].update(data.get('stream'))
+            _LOGGER.debug('stream %s updated', self._streams[data.get('id')].friendly_name)
+            self._streams[data.get("id")].callback()
+            for group in self._groups.values():
+                if group.stream == data.get('id'):
+                    group.callback()
+                    for clientID in group.clients:
+                        self._clients.get(clientID).callback()
+        else:
+            if data.get('stream', {}).get('uri', {}).get('query', {}).get('codec') == 'null':
+                _LOGGER.debug('stream %s is input-only, ignore', data.get('id'))
+            else:
+                _LOGGER.info('stream %s not found, synchronize', data.get('id'))
+                self.synchronize(self.status())
 
     def set_on_update_callback(self, func):
         """Set on update callback function."""
