@@ -110,22 +110,24 @@ class Snapserver():
         """Initiate server connection."""
         self._is_stopped = False
         await self._do_connect()
+        status, error = await self.status()
+        if (not isinstance(status, dict)) or ('server' not in status):
+            _LOGGER.warning('connected, but no valid response:\n%s', str(error))
+            self.stop()
+            raise OSError()
         _LOGGER.debug('connected to snapserver on %s:%s', self._host, self._port)
-        status = await self.status()
         self.synchronize(status)
         self._on_server_connect()
 
-    async def stop(self):
+    def stop(self):
         """Stop server."""
         self._is_stopped = True
         self._do_disconnect()
-        _LOGGER.debug('disconnected from snapserver on %s:%s', self._host, self._port)
+        _LOGGER.debug('Stopping')
         self._clients = {}
         self._streams = {}
         self._groups = {}
         self._version = None
-        self._protocol = None
-        self._transport = None
 
     def _do_disconnect(self):
         """Perform the connection to the server."""
@@ -145,11 +147,15 @@ class Snapserver():
             """Actual coroutine ro try to reconnect or reschedule."""
             try:
                 await self._do_connect()
+                status, error = await self.status()
+                if (not isinstance(status, dict)) or ('server' not in status):
+                    _LOGGER.warning('connected, but no valid response:\n%s', str(error))
+                    await self.stop()
+                    raise OSError()
             except OSError:
                 self._loop.call_later(SERVER_RECONNECT_DELAY,
                                       self._reconnect_cb)
             else:
-                status = await self.status()
                 self.synchronize(status)
                 self._on_server_connect()
         asyncio.ensure_future(try_reconnect())
@@ -157,12 +163,11 @@ class Snapserver():
     async def _transact(self, method, params=None):
         """Wrap requests."""
         result = error = None
-        try:
+        if self._protocol is None or self._transport is None or self._transport.is_closing():
+            error = {"code": None, "message": "Server not connected"}
+        else:
             result, error = await self._protocol.request(method, params)
-        except:
-            _LOGGER.warning('could not send request')
-            error = 'could not send request'
-        return result or error
+        return (result, error)
 
     @property
     def version(self):
@@ -171,17 +176,16 @@ class Snapserver():
 
     async def status(self):
         """System status."""
-        result = await self._transact(SERVER_GETSTATUS)
-        return result
+        return await self._transact(SERVER_GETSTATUS)
 
-    def rpc_version(self):
+    async def rpc_version(self):
         """RPC version."""
-        return self._transact(SERVER_GETRPCVERSION)
+        return await self._transact(SERVER_GETRPCVERSION)
 
     async def delete_client(self, identifier):
         """Delete client."""
         params = {'id': identifier}
-        response = await self._transact(SERVER_DELETECLIENT, params)
+        response, _ = await self._transact(SERVER_DELETECLIENT, params)
         self.synchronize(response)
 
     def client_name(self, identifier, name):
@@ -303,10 +307,10 @@ class Snapserver():
             params[key] = value
         if isinstance(parameters, dict):
             params.update(parameters)
-        result = await self._transact(method, params)
+        result, error = await self._transact(method, params)
         if isinstance(result, dict) and key in result:
             return result.get(key)
-        return result
+        return result or error
 
     def _on_server_connect(self):
         """Handle server connection."""
@@ -316,15 +320,13 @@ class Snapserver():
 
     def _on_server_disconnect(self, exception):
         """Handle server disconnection."""
-        _LOGGER.debug('Server disconnected')
+        _LOGGER.debug('Server disconnected: %s', str(exception))
         if self._on_disconnect_callback_func and callable(self._on_disconnect_callback_func):
             self._on_disconnect_callback_func(exception)
-        if not self._is_stopped:
-            self._do_disconnect()
-            self._protocol = None
-            self._transport = None
-            if self._reconnect:
-                self._reconnect_cb()
+        self._protocol = None
+        self._transport = None
+        if (not self._is_stopped) and self._reconnect:
+            self._reconnect_cb()
 
     def _on_server_update(self, data):
         """Handle server update."""
@@ -416,7 +418,10 @@ class Snapserver():
                 _LOGGER.debug('stream %s is input-only, ignore', data.get('id'))
             else:
                 _LOGGER.info('stream %s not found, synchronize', data.get('id'))
-                self.synchronize(self.status())
+
+                async def async_sync():
+                    self.synchronize((await self.status())[0])
+                asyncio.ensure_future(async_sync())
 
     def set_on_update_callback(self, func):
         """Set on update callback function."""

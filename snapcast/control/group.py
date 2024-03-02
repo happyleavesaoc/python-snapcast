@@ -124,7 +124,7 @@ class Snapgroup():
         new_clients.append(client_identifier)
         await self._server.group_clients(self.identifier, new_clients)
         _LOGGER.debug('added %s to %s', client_identifier, self.identifier)
-        status = await self._server.status()
+        status = (await self._server.status())[0]
         self._server.synchronize(status)
         self._server.client(client_identifier).callback()
         self.callback()
@@ -135,7 +135,7 @@ class Snapgroup():
         new_clients.remove(client_identifier)
         await self._server.group_clients(self.identifier, new_clients)
         _LOGGER.debug('removed %s from %s', client_identifier, self.identifier)
-        status = await self._server.status()
+        status = (await self._server.status())[0]
         self._server.synchronize(status)
         self._server.client(client_identifier).callback()
         self.callback()
