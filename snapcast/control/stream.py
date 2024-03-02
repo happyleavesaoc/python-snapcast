@@ -65,7 +65,7 @@ class Snapstream():
         self._stream['properties'] = data
 
     def __repr__(self):
-        """String representation."""
+        """Return string representation."""
         return f'Snapstream ({self.name})'
 
     def callback(self):

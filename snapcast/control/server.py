@@ -65,7 +65,7 @@ _VERSIONS = {
 
 
 class ServerVersionError(NotImplementedError):
-    pass
+    """Server Version Error, not implemented."""
 
 
 # pylint: disable=too-many-public-methods
@@ -114,7 +114,7 @@ class Snapserver():
         if (not isinstance(status, dict)) or ('server' not in status):
             _LOGGER.warning('connected, but no valid response:\n%s', str(error))
             self.stop()
-            raise OSError()
+            raise OSError
         _LOGGER.debug('connected to snapserver on %s:%s', self._host, self._port)
         self.synchronize(status)
         self._on_server_connect()
@@ -140,7 +140,7 @@ class Snapserver():
             lambda: SnapcastProtocol(self._callbacks), self._host, self._port)
 
     def _reconnect_cb(self):
-        """Callback to reconnect to the server."""
+        """Try to reconnect to the server."""
         _LOGGER.debug('try reconnect')
 
         async def try_reconnect():
@@ -150,8 +150,8 @@ class Snapserver():
                 status, error = await self.status()
                 if (not isinstance(status, dict)) or ('server' not in status):
                     _LOGGER.warning('connected, but no valid response:\n%s', str(error))
-                    await self.stop()
-                    raise OSError()
+                    self.stop()
+                    raise OSError
             except OSError:
                 self._loop.call_later(SERVER_RECONNECT_DELAY,
                                       self._reconnect_cb)
@@ -188,56 +188,57 @@ class Snapserver():
         response, _ = await self._transact(SERVER_DELETECLIENT, params)
         self.synchronize(response)
 
-    def client_name(self, identifier, name):
+    async def client_name(self, identifier, name):
         """Set client name."""
-        return self._request(CLIENT_SETNAME, identifier, 'name', name)
+        return await self._request(CLIENT_SETNAME, identifier, 'name', name)
 
-    def client_latency(self, identifier, latency):
+    async def client_latency(self, identifier, latency):
         """Set client latency."""
-        return self._request(CLIENT_SETLATENCY, identifier, 'latency', latency)
+        return await self._request(CLIENT_SETLATENCY, identifier, 'latency', latency)
 
-    def client_volume(self, identifier, volume):
+    async def client_volume(self, identifier, volume):
         """Set client volume."""
-        return self._request(CLIENT_SETVOLUME, identifier, 'volume', volume)
+        return await self._request(CLIENT_SETVOLUME, identifier, 'volume', volume)
 
-    def client_status(self, identifier):
+    async def client_status(self, identifier):
         """Get client status."""
-        return self._request(CLIENT_GETSTATUS, identifier, 'client')
+        return await self._request(CLIENT_GETSTATUS, identifier, 'client')
 
-    def group_status(self, identifier):
+    async def group_status(self, identifier):
         """Get group status."""
-        return self._request(GROUP_GETSTATUS, identifier, 'group')
+        return await self._request(GROUP_GETSTATUS, identifier, 'group')
 
-    def group_mute(self, identifier, status):
+    async def group_mute(self, identifier, status):
         """Set group mute."""
-        return self._request(GROUP_SETMUTE, identifier, 'mute', status)
+        return await self._request(GROUP_SETMUTE, identifier, 'mute', status)
 
-    def group_stream(self, identifier, stream_id):
+    async def group_stream(self, identifier, stream_id):
         """Set group stream."""
-        return self._request(GROUP_SETSTREAM, identifier, 'stream_id', stream_id)
+        return await self._request(GROUP_SETSTREAM, identifier, 'stream_id', stream_id)
 
-    def group_clients(self, identifier, clients):
+    async def group_clients(self, identifier, clients):
         """Set group clients."""
-        return self._request(GROUP_SETCLIENTS, identifier, 'clients', clients)
+        return await self._request(GROUP_SETCLIENTS, identifier, 'clients', clients)
 
-    def group_name(self, identifier, name):
+    async def group_name(self, identifier, name):
         """Set group name."""
         self._version_check(GROUP_SETNAME)
-        return self._request(GROUP_SETNAME, identifier, 'name', name)
+        return await self._request(GROUP_SETNAME, identifier, 'name', name)
 
-    def stream_control(self, identifier, control_command, control_params):
+    async def stream_control(self, identifier, control_command, control_params):
         """Set stream control."""
         self._version_check(STREAM_SETPROPERTY)
-        return self._request(STREAM_CONTROL, identifier, 'command', control_command, control_params)
+        return await self._request(
+            STREAM_CONTROL, identifier, 'command', control_command, control_params)
 
-    def stream_setmeta(self, identifier, meta):  # deprecated
+    async def stream_setmeta(self, identifier, meta):  # deprecated
         """Set stream metadata."""
-        return self._request(STREAM_SETMETA, identifier, 'meta', meta)
+        return await self._request(STREAM_SETMETA, identifier, 'meta', meta)
 
-    def stream_setproperty(self, identifier, stream_property, value):
+    async def stream_setproperty(self, identifier, stream_property, value):
         """Set stream metadata."""
         self._version_check(STREAM_SETPROPERTY)
-        return self._request(STREAM_SETPROPERTY, identifier, parameters={
+        return await self._request(STREAM_SETPROPERTY, identifier, parameters={
             'property': stream_property,
             'value': value
             })
@@ -300,6 +301,7 @@ class Snapserver():
         self._clients = new_clients
         self._streams = new_streams
 
+    # pylint: disable=too-many-arguments
     async def _request(self, method, identifier, key=None, value=None, parameters=None):
         """Perform request with identifier."""
         params = {'id': identifier}
@@ -338,8 +340,8 @@ class Snapserver():
         """Handle group mute."""
         group = self._groups.get(data.get('id'))
         group.update_mute(data)
-        for clientID in group.clients:
-            self._clients.get(clientID).callback()
+        for client_id in group.clients:
+            self._clients.get(client_id).callback()
 
     def _on_group_name_changed(self, data):
         """Handle group name changed."""
@@ -349,8 +351,8 @@ class Snapserver():
         """Handle group stream change."""
         group = self._groups.get(data.get('id'))
         group.update_stream(data)
-        for clientID in group.clients:
-            self._clients.get(clientID).callback()
+        for client_id in group.clients:
+            self._clients.get(client_id).callback()
 
     def _on_client_connect(self, data):
         """Handle client connect."""
@@ -399,8 +401,8 @@ class Snapserver():
         for group in self._groups.values():
             if group.stream == data.get('id'):
                 group.callback()
-                for clientID in group.clients:
-                    self._clients.get(clientID).callback()
+                for client_id in group.clients:
+                    self._clients.get(client_id).callback()
 
     def _on_stream_update(self, data):
         """Handle stream update."""
@@ -411,8 +413,8 @@ class Snapserver():
             for group in self._groups.values():
                 if group.stream == data.get('id'):
                     group.callback()
-                    for clientID in group.clients:
-                        self._clients.get(clientID).callback()
+                    for client_id in group.clients:
+                        self._clients.get(client_id).callback()
         else:
             if data.get('stream', {}).get('uri', {}).get('query', {}).get('codec') == 'null':
                 _LOGGER.debug('stream %s is input-only, ignore', data.get('id'))
@@ -440,7 +442,7 @@ class Snapserver():
         self._new_client_callback_func = func
 
     def __repr__(self):
-        """String representation."""
+        """Return string representation."""
         return f'Snapserver {self.version} ({self._host})'
 
     def _version_check(self, api_call):

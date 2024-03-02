@@ -105,7 +105,7 @@ class Snapgroup():
     @property
     def friendly_name(self):
         """Get friendly name."""
-        fname =  self.name if self.name != '' else "+".join(
+        fname = self.name if self.name != '' else "+".join(
             sorted([self._server.client(c).friendly_name for c in self.clients
                     if c in [client.identifier for client in self._server.clients]]))
         return fname if fname != '' else self.identifier
@@ -191,5 +191,5 @@ class Snapgroup():
         self._callback_func = func
 
     def __repr__(self):
-        """String representation."""
+        """Return string representation."""
         return f'Snapgroup ({self.friendly_name}, {self.identifier})'

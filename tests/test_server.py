@@ -129,7 +129,7 @@ return_values = {
 
 
 def mock_transact(key):
-    return AsyncMock(return_value=return_values[key])
+    return AsyncMock(return_value=(return_values[key], None))
 
 
 class TestSnapserver(unittest.TestCase):
@@ -143,6 +143,21 @@ class TestSnapserver(unittest.TestCase):
         self.server = self._run(create_server(self.loop, 'abcd'))
         self.server.synchronize(return_values.get('Server.GetStatus'))
 
+    @mock.patch.object(Snapserver, 'status', new=AsyncMock(
+        return_value=(None, {"code": -1, "message": "failed"})))
+    @mock.patch.object(Snapserver, '_do_connect', new=AsyncMock())
+    @mock.patch.object(Snapserver, 'stop', new=mock.MagicMock())
+    def test_start_fail(self):
+        with self.assertRaises(OSError):
+            self._run(self.server.start())
+
+    @mock.patch.object(Snapserver, '_transact', new=mock_transact('Server.GetStatus'))
+    @mock.patch.object(Snapserver, '_do_connect', new=AsyncMock())
+    def test_start(self):
+        self.server._version = None
+        self._run(self.server.start())
+        self.assertEqual(self.server.version, '0.26.0')
+
     def test_init(self):
         self.assertEqual(self.server.version, '0.26.0')
         self.assertEqual(len(self.server.clients), 1)
@@ -154,12 +169,12 @@ class TestSnapserver(unittest.TestCase):
 
     @mock.patch.object(Snapserver, '_transact', new=mock_transact('Server.GetStatus'))
     def test_status(self):
-        status = self._run(self.server.status())
+        status, _ = self._run(self.server.status())
         self.assertEqual(status['server']['server']['snapserver']['version'], '0.26.0')
 
     @mock.patch.object(Snapserver, '_transact', new=mock_transact('Server.GetRPCVersion'))
     def test_rpc_version(self):
-        version = self._run(self.server.rpc_version())
+        version, _ = self._run(self.server.rpc_version())
         self.assertEqual(version, {'major': 2, 'minor': 0, 'patch': 1})
 
     @mock.patch.object(Snapserver, '_transact', new=mock_transact('Client.SetName'))

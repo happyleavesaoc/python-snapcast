@@ -7,6 +7,7 @@ import random
 SERVER_ONDISCONNECT = 'Server.OnDisconnect'
 
 
+# pylint: disable=consider-using-f-string
 def jsonrpc_request(method, identifier, params=None):
     """Produce a JSONRPC request."""
     return '{}\r\n'.format(json.dumps({
