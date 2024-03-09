@@ -101,11 +101,11 @@ return_values = {
               {
                   'clients': []
               }
-          ],
-          'server': SERVER_STATUS,  # DeleteClient calls synchronize
-          'streams': [
-          ]
-       }
+              ],
+            'server': SERVER_STATUS,  # DeleteClient calls synchronize
+            'streams': [
+                ]
+            }
     },
     'Group.GetStatus': {
         'group': {
@@ -124,7 +124,13 @@ return_values = {
     'Stream.SetMeta': {
         'foo': 'bar'
     },
-    'Stream.SetProperty': 'ok'
+    'Stream.SetProperty': 'ok',
+    'Stream.AddStream': {
+        'id': 'stream 2'
+    },
+    'Stream.RemoveStream': {
+        'id': 'stream 2'
+    },
 }
 
 
@@ -227,6 +233,18 @@ class TestSnapserver(unittest.TestCase):
     def test_stream_setproperty(self):
         result = self._run(self.server.stream_setproperty('stream', 'foo', 'bar'))
         self.assertEqual(result, 'ok')
+
+    @mock.patch.object(Snapserver, '_transact', new=mock_transact('Stream.AddStream'))
+    @mock.patch.object(Snapserver, 'synchronize', new=MagicMock())
+    def test_stream_addstream(self):
+        result = self._run(self.server.stream_add_stream('pipe:///tmp/test?name=stream 2'))
+        self.assertDictEqual(result, {'id': 'stream 2'})
+
+    @mock.patch.object(Snapserver, '_transact', new=mock_transact('Stream.RemoveStream'))
+    @mock.patch.object(Snapserver, 'synchronize', new=MagicMock())
+    def test_stream_removestream(self):
+        result = self._run(self.server.stream_remove_stream('stream 2'))
+        self.assertDictEqual(result, {'id': 'stream 2'})
 
     def test_synchronize(self):
         status = copy.deepcopy(return_values.get('Server.GetStatus'))

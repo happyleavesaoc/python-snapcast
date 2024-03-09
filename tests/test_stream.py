@@ -21,6 +21,7 @@ class TestSnapstream(unittest.TestCase):
             'id': 'test',
             'status': 'playing',
             'uri': {
+                'path': '/tmp/snapfifo',
                 'query': {
                     'name': ''
                 }
@@ -40,9 +41,11 @@ class TestSnapstream(unittest.TestCase):
         self.assertEqual(self.stream.status, 'playing')
         self.assertEqual(self.stream.name, '')
         self.assertEqual(self.stream.friendly_name, 'test')
+        self.assertEqual(self.stream.path, '/tmp/snapfifo')
         self.assertDictEqual(self.stream_meta.meta, {'TITLE': 'Happy!'})
         self.assertDictEqual(self.stream.properties['metadata'], {'title': 'Happy!'})
-        self.assertDictEqual(self.stream.properties, {'canControl': False, 'metadata': {'title': 'Happy!',}})
+        self.assertDictEqual(self.stream.properties,
+                             {'canControl': False, 'metadata': {'title': 'Happy!'}})
         self.assertDictEqual(self.stream.metadata, {'title': 'Happy!'})
 
     def test_update(self):

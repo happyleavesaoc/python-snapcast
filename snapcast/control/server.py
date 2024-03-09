@@ -44,6 +44,8 @@ STREAM_CONTROL = 'Stream.Control'  # not yet implemented
 STREAM_SETMETA = 'Stream.SetMeta'  # deprecated
 STREAM_ONUPDATE = 'Stream.OnUpdate'
 STREAM_ONMETA = 'Stream.OnMetadata'  # deprecated
+STREAM_ADDSTREAM = 'Stream.AddStream'
+STREAM_REMOVESTREAM = 'Stream.RemoveStream'
 
 SERVER_RECONNECT_DELAY = 5
 
@@ -55,12 +57,15 @@ _METHODS = [SERVER_GETSTATUS, SERVER_GETRPCVERSION, SERVER_DELETECLIENT,
             SERVER_DELETECLIENT, CLIENT_GETSTATUS, CLIENT_SETNAME,
             CLIENT_SETLATENCY, CLIENT_SETVOLUME,
             GROUP_GETSTATUS, GROUP_SETMUTE, GROUP_SETSTREAM, GROUP_SETCLIENTS,
-            GROUP_SETNAME, STREAM_SETMETA, STREAM_SETPROPERTY, STREAM_CONTROL]
+            GROUP_SETNAME, STREAM_SETMETA, STREAM_SETPROPERTY, STREAM_CONTROL,
+            STREAM_ADDSTREAM, STREAM_REMOVESTREAM]
 
 # server versions in which new methods were added
 _VERSIONS = {
     GROUP_SETNAME: '0.16.0',
     STREAM_SETPROPERTY: '0.26.0',
+    STREAM_ADDSTREAM: '0.16.0',
+    STREAM_REMOVESTREAM: '0.16.0',
 }
 
 
@@ -242,6 +247,21 @@ class Snapserver():
             'property': stream_property,
             'value': value
             })
+
+    async def stream_add_stream(self, stream_uri):
+        """Add a stream."""
+        params = {"streamUri": stream_uri}
+        result, error = await self._transact(STREAM_ADDSTREAM, params)
+        if (isinstance(result, dict) and ("id" in result)):
+            self.synchronize((await self.status())[0])
+        return result or error
+
+    async def stream_remove_stream(self, identifier):
+        """Remove a Stream."""
+        result = await self._request(STREAM_REMOVESTREAM, identifier)
+        if (isinstance(result, dict) and ("id" in result)):
+            self.synchronize((await self.status())[0])
+        return result
 
     def group(self, group_identifier):
         """Get a group."""
