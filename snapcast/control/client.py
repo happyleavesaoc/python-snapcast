@@ -32,6 +32,7 @@ class Snapclient():
         for group in self._server.groups:
             if self.identifier in group.clients:
                 return group
+        return None
 
     @property
     def friendly_name(self):
@@ -162,5 +163,5 @@ class Snapclient():
         self._callback_func = func
 
     def __repr__(self):
-        """String representation."""
+        """Return string representation."""
         return f'Snapclient {self.version} ({self.friendly_name}, {self.identifier})'

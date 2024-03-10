@@ -7,6 +7,7 @@ import random
 SERVER_ONDISCONNECT = 'Server.OnDisconnect'
 
 
+# pylint: disable=consider-using-f-string
 def jsonrpc_request(method, identifier, params=None):
     """Produce a JSONRPC request."""
     return '{}\r\n'.format(json.dumps({
@@ -33,6 +34,9 @@ class SnapcastProtocol(asyncio.Protocol):
 
     def connection_lost(self, exc):
         """When a connection is lost."""
+        for b in self._buffer.values():
+            b['error'] = {"code": -1, "message": "connection lost"}
+            b['flag'].set()
         self._callbacks.get(SERVER_ONDISCONNECT)(exc)
 
     def data_received(self, data):
@@ -74,8 +78,8 @@ class SnapcastProtocol(asyncio.Protocol):
         self._transport.write(jsonrpc_request(method, identifier, params))
         self._buffer[identifier] = {'flag': asyncio.Event()}
         await self._buffer[identifier]['flag'].wait()
-        result = self._buffer[identifier]['data']
-        error = self._buffer[identifier]['error']
-        del self._buffer[identifier]['data']
-        del self._buffer[identifier]['error']
+        result = self._buffer[identifier].get('data')
+        error = self._buffer[identifier].get('error')
+        self._buffer[identifier].clear()
+        del self._buffer[identifier]
         return (result, error)

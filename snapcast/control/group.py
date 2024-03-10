@@ -105,7 +105,7 @@ class Snapgroup():
     @property
     def friendly_name(self):
         """Get friendly name."""
-        fname =  self.name if self.name != '' else "+".join(
+        fname = self.name if self.name != '' else "+".join(
             sorted([self._server.client(c).friendly_name for c in self.clients
                     if c in [client.identifier for client in self._server.clients]]))
         return fname if fname != '' else self.identifier
@@ -124,7 +124,7 @@ class Snapgroup():
         new_clients.append(client_identifier)
         await self._server.group_clients(self.identifier, new_clients)
         _LOGGER.debug('added %s to %s', client_identifier, self.identifier)
-        status = await self._server.status()
+        status = (await self._server.status())[0]
         self._server.synchronize(status)
         self._server.client(client_identifier).callback()
         self.callback()
@@ -135,7 +135,7 @@ class Snapgroup():
         new_clients.remove(client_identifier)
         await self._server.group_clients(self.identifier, new_clients)
         _LOGGER.debug('removed %s from %s', client_identifier, self.identifier)
-        status = await self._server.status()
+        status = (await self._server.status())[0]
         self._server.synchronize(status)
         self._server.client(client_identifier).callback()
         self.callback()
@@ -191,5 +191,5 @@ class Snapgroup():
         self._callback_func = func
 
     def __repr__(self):
-        """String representation."""
+        """Return string representation."""
         return f'Snapgroup ({self.friendly_name}, {self.identifier})'
