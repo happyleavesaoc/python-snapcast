@@ -74,11 +74,8 @@ _VERSIONS = {
 
 class ServerVersionError(NotImplementedError):
     """Server Version Error, not implemented."""
-<<<<<<< HEAD
-=======
 
     pass
->>>>>>> 7ae0f1b (Corrected some pylint warnings and errors)
 
 
 # pylint: disable=too-many-public-methods
@@ -460,26 +457,6 @@ class Snapserver():
 
     def _on_stream_update(self, data):
         """Handle stream update."""
-<<<<<<< HEAD
-        if data.get('id') in self._streams:
-            self._streams[data.get('id')].update(data.get('stream'))
-            _LOGGER.debug('stream %s updated', self._streams[data.get('id')].friendly_name)
-            self._streams[data.get("id")].callback()
-            for group in self._groups.values():
-                if group.stream == data.get('id'):
-                    group.callback()
-                    for client_id in group.clients:
-                        self._clients.get(client_id).callback()
-        else:
-            if data.get('stream', {}).get('uri', {}).get('query', {}).get('codec') == 'null':
-                _LOGGER.debug('stream %s is input-only, ignore', data.get('id'))
-            else:
-                _LOGGER.info('stream %s not found, synchronize', data.get('id'))
-
-                async def async_sync():
-                    self.synchronize((await self.status())[0])
-                asyncio.ensure_future(async_sync())
-=======
         self._streams[data.get('id')].update(data.get('stream'))
         _LOGGER.debug('stream %s updated', self._streams[data.get('id')].friendly_name)
         self._streams[data.get("id")].callback()
@@ -488,7 +465,6 @@ class Snapserver():
                 group.callback()
                 for client_id in group.clients:
                     self._clients.get(client_id).callback()
->>>>>>> 7ae0f1b (Corrected some pylint warnings and errors)
 
     def set_on_update_callback(self, func):
         """Set on update callback function."""
