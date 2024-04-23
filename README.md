@@ -3,8 +3,9 @@
 # python-snapcast
 
 Control [Snapcast](https://github.com/badaix/snapcast) in Python 3. Reads client configurations, updates clients, and receives updates from other controllers.
+The connection could be made with the json-rpc or Websockets interface. Websockets is more stable due to [issue](https://github.com/badaix/snapcast/issues/1173) in snapserver. 
 
-Supports Snapcast `0.15.0`.
+Supports Snapcast `0.15.0`, but works well with latest Snapcast `0.27.0`
 
 ## Install
 
@@ -18,7 +19,7 @@ import asyncio
 import snapcast.control
 
 loop = asyncio.get_event_loop()
-server = loop.run_until_complete(snapcast.control.create_server(loop, 'localhost'))
+server = loop.run_until_complete(snapcast.control.create_server(loop, 'localhost', port=1780, reconnect=True, use_websockets=True))
 
 # print all client names
 for client in server.clients:
