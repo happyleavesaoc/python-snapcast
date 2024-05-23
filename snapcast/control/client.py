@@ -1,16 +1,30 @@
 """Snapcast client."""
-import logging
 
+import logging
 
 _LOGGER = logging.getLogger(__name__)
 
 
 # pylint: disable=too-many-public-methods
-class Snapclient():
-    """Represents a snapclient."""
+class Snapclient:
+    """Represents a snapclient.
+
+    Attributes:
+        _server (str): The server address.
+        _snapshot (dict): The snapshot of the client's state.
+        _last_seen: The last seen timestamp of the client.
+        _callback_func: The callback function for the client.
+
+    """
 
     def __init__(self, server, data):
-        """Initialize."""
+        """Initialize the Client object.
+
+        Args:
+            server (str): The server address.
+            data (dict): The initial data for the client.
+
+        """
         self._server = server
         self._snapshot = None
         self._last_seen = None
@@ -18,17 +32,30 @@ class Snapclient():
         self.update(data)
 
     def update(self, data):
-        """Update client."""
+        """Update client.
+
+        Args:
+            data: The updated client data.
+
+        """
         self._client = data
 
     @property
     def identifier(self):
-        """Get identifier."""
-        return self._client.get('id')
+        """Get identifier.
+
+        Returns:
+            The identifier of the client.
+        """
+        return self._client.get("id")
 
     @property
     def group(self):
-        """Get group."""
+        """Get the group that this client belongs to.
+
+        Returns:
+            The group object that this client belongs to, or None if the client is not in any group.
+        """
         for group in self._server.groups:
             if self.identifier in group.clients:
                 return group
@@ -36,132 +63,212 @@ class Snapclient():
 
     @property
     def friendly_name(self):
-        """Get friendly name."""
-        if len(self._client.get('config').get('name')):
-            return self._client.get('config').get('name')
-        return self._client.get('host').get('name')
+        """Get the friendly name of the client.
+
+        Returns:
+            str: The friendly name of the client.
+
+        """
+        if len(self._client.get("config").get("name")):
+            return self._client.get("config").get("name")
+        return self._client.get("host").get("name")
 
     @property
     def version(self):
-        """Version."""
-        return self._client.get('snapclient').get('version')
+        """Version.
+
+        Returns:
+            str: The version of the snapclient.
+        """
+        return self._client.get("snapclient").get("version")
 
     @property
     def connected(self):
-        """Connected or not."""
-        return self._client.get('connected')
+        """Get the current connection status of the client.
+
+        Returns:
+            bool: True if the client is connected, False otherwise.
+        """
+        return self._client.get("connected")
 
     @property
     def name(self):
-        """Name."""
-        return self._client.get('config').get('name')
+        """Get the name of the client.
+
+        Returns:
+            str: The name of the client.
+        """
+        return self._client.get("config").get("name")
 
     async def set_name(self, name):
-        """Set a client name."""
+        """Set a client name.
+
+        Args:
+            name (str): The name to set for the client.
+
+        """
         if not name:
-            name = ''
-        self._client['config']['name'] = name
+            name = ""
+        self._client["config"]["name"] = name
         await self._server.client_name(self.identifier, name)
 
     @property
     def latency(self):
-        """Latency."""
-        return self._client.get('config').get('latency')
+        """Get the client latency.
+
+        Returns:
+            int: The latency of the client.
+        """
+        return self._client.get("config").get("latency")
 
     async def set_latency(self, latency):
-        """Set client latency."""
-        self._client['config']['latency'] = latency
+        """Set client latency.
+
+        Args:
+            latency (int): The latency to set for the client.
+        """
+        self._client["config"]["latency"] = latency
         await self._server.client_latency(self.identifier, latency)
 
     @property
     def muted(self):
-        """Muted or not."""
-        return self._client.get('config').get('volume').get('muted')
+        """Get the mute status of the client.
+
+        Returns:
+            bool: True if the client is muted, False otherwise.
+        """
+        return self._client.get("config").get("volume").get("muted")
 
     async def set_muted(self, status):
-        """Set client mute status."""
-        new_volume = self._client['config']['volume']
-        new_volume['muted'] = status
-        self._client['config']['volume']['muted'] = status
+        """Set client mute status.
+
+        Args:
+            status (bool): The mute status to set for the client.
+        """
+        new_volume = self._client["config"]["volume"]
+        new_volume["muted"] = status
+        self._client["config"]["volume"]["muted"] = status
         await self._server.client_volume(self.identifier, new_volume)
-        _LOGGER.debug('set muted to %s on %s', status, self.friendly_name)
+        _LOGGER.debug("set muted to %s on %s", status, self.friendly_name)
 
     @property
     def volume(self):
-        """Volume percent."""
-        return self._client.get('config').get('volume').get('percent')
+        """Get the volume percent.
+
+        Returns:
+            int: The volume percent of the client.
+        """
+        return self._client.get("config").get("volume").get("percent")
 
     async def set_volume(self, percent, update_group=True):
-        """Set client volume percent."""
+        """Set client volume percent.
+
+        Args:
+            percent (int): The volume percent to set for the client.
+            update_group (bool): Whether to update the group volume. Defaults to True.
+
+        Raises:
+            ValueError: If volume percent is out of range.
+        """
         if percent not in range(0, 101):
-            raise ValueError('Volume percent out of range')
-        new_volume = self._client['config']['volume']
-        new_volume['percent'] = percent
-        self._client['config']['volume']['percent'] = percent
+            raise ValueError("Volume percent out of range")
+        new_volume = self._client["config"]["volume"]
+        new_volume["percent"] = percent
+        self._client["config"]["volume"]["percent"] = percent
         await self._server.client_volume(self.identifier, new_volume)
         if update_group:
             self._server.group(self.group.identifier).callback()
-        _LOGGER.debug('set volume to %s on %s', percent, self.friendly_name)
+        _LOGGER.debug("set volume to %s on %s", percent, self.friendly_name)
 
     def groups_available(self):
-        """Get available group objects."""
+        """Get available group objects.
+
+        Returns:
+            list: The list of available group objects.
+        """
         return list(self._server.groups)
 
     def update_volume(self, data):
-        """Update volume."""
-        self._client['config']['volume'] = data['volume']
-        _LOGGER.debug('updated volume on %s', self.friendly_name)
+        """Update volume.
+
+        Args:
+            data (dict): The updated volume data.
+        """
+        self._client["config"]["volume"] = data["volume"]
+        _LOGGER.debug("updated volume on %s", self.friendly_name)
         self._server.group(self.group.identifier).callback()
         self.callback()
 
     def update_name(self, data):
-        """Update name."""
-        self._client['config']['name'] = data['name']
-        _LOGGER.debug('updated name on %s', self.friendly_name)
+        """Update name.
+
+        Args:
+            data (dict): The updated name data.
+        """
+        self._client["config"]["name"] = data["name"]
+        _LOGGER.debug("updated name on %s", self.friendly_name)
         self.callback()
 
     def update_latency(self, data):
-        """Update latency."""
-        self._client['config']['latency'] = data['latency']
-        _LOGGER.debug('updated latency on %s', self.friendly_name)
+        """Update latency.
+
+        Args:
+            data (dict): The updated latency data.
+        """
+        self._client["config"]["latency"] = data["latency"]
+        _LOGGER.debug("updated latency on %s", self.friendly_name)
         self.callback()
 
     def update_connected(self, status):
-        """Update connected."""
-        self._client['connected'] = status
-        _LOGGER.debug('updated connected status to %s on %s', status, self.friendly_name)
+        """Update connected status.
+
+        Args:
+            status (bool): The new connected status.
+        """
+        self._client["connected"] = status
+        _LOGGER.debug(
+            "updated connected status to %s on %s", status, self.friendly_name
+        )
         self.callback()
 
     def snapshot(self):
-        """Snapshot current state."""
+        """Take a snapshot of the current state."""
         self._snapshot = {
-            'name': self.name,
-            'volume': self.volume,
-            'muted': self.muted,
-            'latency': self.latency
+            "name": self.name,
+            "volume": self.volume,
+            "muted": self.muted,
+            "latency": self.latency,
         }
-        _LOGGER.debug('took snapshot of current state of %s', self.friendly_name)
+        _LOGGER.debug("took snapshot of current state of %s", self.friendly_name)
 
     async def restore(self):
-        """Restore snapshotted state."""
+        """Restore the snapshotted state."""
         if not self._snapshot:
             return
-        await self.set_name(self._snapshot['name'])
-        await self.set_volume(self._snapshot['volume'])
-        await self.set_muted(self._snapshot['muted'])
-        await self.set_latency(self._snapshot['latency'])
+        await self.set_name(self._snapshot["name"])
+        await self.set_volume(self._snapshot["volume"])
+        await self.set_muted(self._snapshot["muted"])
+        await self.set_latency(self._snapshot["latency"])
         self.callback()
-        _LOGGER.debug('restored snapshot of state of %s', self.friendly_name)
+        _LOGGER.debug("restored snapshot of state of %s", self.friendly_name)
 
     def callback(self):
-        """Run callback."""
+        """Run the callback function if set."""
         if self._callback_func and callable(self._callback_func):
             self._callback_func(self)
 
     def set_callback(self, func):
-        """Set callback function."""
+        """Set the callback function.
+
+        Args:
+            func (callable): The callback function to set.
+        """
         self._callback_func = func
 
     def __repr__(self):
-        """Return string representation."""
-        return f'Snapclient {self.version} ({self.friendly_name}, {self.identifier})'
+        """Return string representation of the client.
+
+        Returns:
+            str: The string representation of the client.
+        """
+        return f"Snapclient {self.version} ({self.friendly_name}, {self.identifier})"
