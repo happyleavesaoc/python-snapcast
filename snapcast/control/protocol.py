@@ -3,21 +3,14 @@
 import asyncio
 import json
 import random
+from typing import Any, Callable, Dict, Optional, Tuple
 
 SERVER_ONDISCONNECT = 'Server.OnDisconnect'
 
+# pylint: disable=consider-using-f-string
 
-def jsonrpc_request(method, identifier, params=None):
-    """Produce a JSONRPC request.
-
-    Args:
-        method (str): The method name to be invoked.
-        identifier (int): The unique identifier for the request.
-        params (dict, optional): The parameters for the method. Defaults to None.
-
-    Returns:
-        bytes: The JSONRPC request in bytes.
-    """
+def jsonrpc_request(method: str, identifier: int, params: Optional[Dict[str, Any]] = None) -> bytes:
+    """Produce a JSONRPC request."""
     return '{}\r\n'.format(json.dumps({
         'id': identifier,
         'method': method,
@@ -25,47 +18,30 @@ def jsonrpc_request(method, identifier, params=None):
         'jsonrpc': '2.0'
     })).encode()
 
-
 class SnapcastProtocol(asyncio.Protocol):
     """Async Snapcast protocol."""
 
-    def __init__(self, callbacks):
-        """Initialize the SnapcastProtocol.
+    def __init__(self, callbacks: Dict[str, Callable[[Any], None]]) -> None:
+        """Initialize the SnapcastProtocol."""
+        self._transport: Optional[asyncio.Transport] = None
+        self._buffer: Dict[int, Dict[str, Any]] = {}
+        self._callbacks: Dict[str, Callable[[Any], None]] = callbacks
+        self._data_buffer: str = ''
 
-        Args:
-            callbacks (dict): A dictionary of callback functions for various events.
-        """
-        self._transport = None
-        self._buffer = {}
-        self._callbacks = callbacks
-        self._data_buffer = ''
-
-    def connection_made(self, transport):
-        """Handle a new connection.
-
-        Args:
-            transport (asyncio.Transport): The transport representing the connection.
-        """
+    def connection_made(self, transport: asyncio.Transport) -> None:
+        """Handle a new connection."""
         self._transport = transport
 
-    def connection_lost(self, exc):
-        """Handle a lost connection.
-
-        Args:
-            exc (Exception): The exception that caused the connection to be lost.
-        """
+    def connection_lost(self, exc: Optional[Exception]) -> None:
+        """Handle a lost connection."""
         for b in self._buffer.values():
             b['error'] = {"code": -1, "message": "connection lost"}
             b['flag'].set()
         if SERVER_ONDISCONNECT in self._callbacks:
             self._callbacks[SERVER_ONDISCONNECT](exc)
 
-    def data_received(self, data):
-        """Handle received data.
-
-        Args:
-            data (bytes): The data received from the connection.
-        """
+    def data_received(self, data: bytes) -> None:
+        """Handle received data."""
         self._data_buffer += data.decode()
         if not self._data_buffer.endswith('\r\n'):
             return
@@ -78,47 +54,28 @@ class SnapcastProtocol(asyncio.Protocol):
             for item in data:
                 self.handle_data(item)
 
-    def handle_data(self, data):
-        """Handle JSONRPC data.
-
-        Args:
-            data (dict): The JSONRPC data to handle.
-        """
+    def handle_data(self, data: Dict[str, Any]) -> None:
+        """Handle JSONRPC data."""
         if 'id' in data:
             self.handle_response(data)
         else:
             self.handle_notification(data)
 
-    def handle_response(self, data):
-        """Handle JSONRPC response.
-
-        Args:
-            data (dict): The JSONRPC response data.
-        """
+    def handle_response(self, data: Dict[str, Any]) -> None:
+        """Handle JSONRPC response."""
         identifier = data.get('id')
-        self._buffer[identifier]['data'] = data.get('result')
-        self._buffer[identifier]['error'] = data.get('error')
-        self._buffer[identifier]['flag'].set()
+        if identifier in self._buffer:
+            self._buffer[identifier]['data'] = data.get('result')
+            self._buffer[identifier]['error'] = data.get('error')
+            self._buffer[identifier]['flag'].set()
 
-    def handle_notification(self, data):
-        """Handle JSONRPC notification.
-
-        Args:
-            data (dict): The JSONRPC notification data.
-        """
+    def handle_notification(self, data: Dict[str, Any]) -> None:
+        """Handle JSONRPC notification."""
         if data.get('method') in self._callbacks:
-            self._callbacks[data.get('method')](data.get('params'))
+            self._callbacks.get(data.get('method'))(data.get('params'))
 
-    async def request(self, method, params):
-        """Send a JSONRPC request.
-
-        Args:
-            method (str): The method name to be invoked.
-            params (dict): The parameters for the method.
-
-        Returns:
-            tuple: A tuple containing the result and error (if any) of the request.
-        """
+    async def request(self, method: str, params: Optional[Dict[str, Any]] = None) -> Tuple[Optional[Any], Optional[Dict[str, Any]]]:
+        """Send a JSONRPC request."""
         identifier = random.randint(1, 1000)
         self._transport.write(jsonrpc_request(method, identifier, params))
         self._buffer[identifier] = {'flag': asyncio.Event()}
@@ -127,4 +84,4 @@ class SnapcastProtocol(asyncio.Protocol):
         error = self._buffer[identifier].get('error')
         self._buffer[identifier].clear()
         del self._buffer[identifier]
-        return result, error
+        return (result, error)
