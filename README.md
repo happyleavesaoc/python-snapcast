@@ -26,7 +26,8 @@ for client in server.clients:
 
 # set volume for client #0 to 50%
 client = server.clients[0]
-loop.run_until_complete(server.client_volume(client.identifier, {'percent': 50, 'muted': False}))
+percent = 50
+loop.run_until_complete(client.set_volume(percent))
 
 # create background task (polling)
 async def testloop():
