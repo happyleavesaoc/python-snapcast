@@ -406,23 +406,23 @@ class Snapserver():
 
     def _on_stream_meta(self, data):  # deprecated
         """Handle stream metadata update."""
-        stream = self._streams[data.get('id')]
-        stream.update_meta(data.get('meta'))
-        _LOGGER.debug('stream %s metadata updated', stream.friendly_name)
-        for group in self._groups.values():
-            if group.stream == data.get('id'):
-                group.callback()
+        if stream := self._streams.get(data.get('id')):
+            stream.update_meta(data.get('meta'))
+            _LOGGER.debug('stream %s metadata updated', stream.friendly_name)
+            for group in self._groups.values():
+                if group.stream == data.get('id'):
+                    group.callback()
 
     def _on_stream_properties(self, data):
         """Handle stream properties update."""
-        stream = self._streams[data.get('id')]
-        stream.update_properties(data.get('properties'))
-        _LOGGER.debug('stream %s properties updated', stream.friendly_name)
-        for group in self._groups.values():
-            if group.stream == data.get('id'):
-                group.callback()
-                for client_id in group.clients:
-                    self._clients.get(client_id).callback()
+        if stream := self._streams.get(data.get('id')):
+            stream.update_properties(data.get('properties'))
+            _LOGGER.debug('stream %s properties updated', stream.friendly_name)
+            for group in self._groups.values():
+                if group.stream == data.get('id'):
+                    group.callback()
+                    for client_id in group.clients:
+                        self._clients.get(client_id).callback()
 
     def _on_stream_update(self, data):
         """Handle stream update."""
