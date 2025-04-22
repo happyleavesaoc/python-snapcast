@@ -190,8 +190,11 @@ class Snapserver():
     async def delete_client(self, identifier):
         """Delete client."""
         params = {'id': identifier}
-        response, _ = await self._transact(SERVER_DELETECLIENT, params)
-        self.synchronize(response)
+        response, error = await self._transact(SERVER_DELETECLIENT, params)
+        if (isinstance(response, dict) and ("server" in response)):
+            self.synchronize(response)
+        return response, error
+
 
     async def client_name(self, identifier, name):
         """Set client name."""
