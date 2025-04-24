@@ -12,6 +12,7 @@ setup(
     install_requires=[
         'construct>=2.5.2',
         'packaging',
+        'websockets',
     ],
     classifiers=[
         'License :: OSI Approved :: MIT License',
