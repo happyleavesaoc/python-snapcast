@@ -379,8 +379,10 @@ class Snapserver():
         stream_id = data.get('stream_id', None)
 
         if stream_id not in self._streams:
-            def update_callback():
+            def update_callback(found):
                 self._on_update_callback_func()
+                if not found:
+                    return
                 group.update_stream(data)
                 for client_id in group.clients:
                     self._clients.get(client_id).callback()
@@ -464,12 +466,15 @@ class Snapserver():
         if stream_id is None:
             return
         if stream_id not in self._streams:
-            _LOGGER.info('stream %s not found, synchronize', stream_id)
+            _LOGGER.info('stream "%s" not found, synchronize', stream_id)
 
             async def async_sync():
                 self.synchronize((await self.status())[0])
+                found = stream_id in self._streams
+                if not found:
+                    _LOGGER.warning('stream "%s" still not found after synchronization', stream_id)
                 if callback and callable(callback):
-                    callback()
+                    callback(found, stream_id)
 
             asyncio.ensure_future(async_sync())
 
