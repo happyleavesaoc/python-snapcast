@@ -273,7 +273,6 @@ class Snapserver():
     def stream(self, stream_identifier):
         """Get a stream."""
         if stream_identifier not in self._streams:
-            self._synchronize_if_stream_missing(stream_identifier)
             raise KeyError(f'Stream "{stream_identifier}" not found')
         return self._streams[stream_identifier]
 
