@@ -51,7 +51,10 @@ class Snapgroup():
     @property
     def stream_status(self):
         """Get stream status."""
-        return self._server.stream(self.stream).status
+        try:
+            return self._server.stream(self.stream).status
+        except KeyError:
+            return "unknown"
 
     @property
     def muted(self):
