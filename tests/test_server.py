@@ -282,13 +282,15 @@ class TestSnapserver(unittest.TestCase):
         self.server._on_group_mute(data)
         self.assertEqual(self.server.group('test').muted, True)
 
-    def test_on_group_stream_changed(self):
+    @mock.patch.object(Snapserver, '_synchronize_if_stream_missing')
+    def test_on_group_stream_changed(self, mock_sync):
         data = {
             'id': 'test',
             'stream_id': 'other'
         }
         self.server._on_group_stream_changed(data)
         self.assertEqual(self.server.group('test').stream, 'other')
+        mock_sync.assert_called_with('other')
 
     def test_on_client_connect(self):
         cb = mock.MagicMock()
@@ -360,6 +362,23 @@ class TestSnapserver(unittest.TestCase):
         }
         self.server._on_stream_update(data)
         self.assertEqual(self.server.stream('stream').status, 'idle')
+
+    @mock.patch.object(Snapserver, '_synchronize_if_stream_missing')
+    def test_on_stream_update_new(self, mock_sync):
+        data = {
+            'id': 'stream_new',
+            'stream': {
+                'id': 'stream_new',
+                'status': 'idle',
+                'uri': {
+                    'query': {
+                        'name': 'stream_new'
+                    }
+                }
+            }
+        }
+        self.server._on_stream_update(data)
+        mock_sync.assert_called_with('stream_new')
 
     def test_on_meta_update(self):
         data = {
