@@ -457,6 +457,8 @@ class Snapserver():
 
             async def async_sync():
                 self.synchronize((await self.status())[0])
+                if self._on_update_callback_func and callable(self._on_update_callback_func):
+                    self._on_update_callback_func()
             asyncio.ensure_future(async_sync())
 
     def set_on_update_callback(self, func):
