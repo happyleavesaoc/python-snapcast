@@ -74,6 +74,21 @@ return_values = {
                             'title': 'Happy!',
                         }
                     }
+                },
+                {
+                    'id': 'stream2',
+                    'status': 'playing',
+                    'uri': {
+                        'query': {
+                            'name': 'stream2'
+                        }
+                    },
+                    'properties': {
+                        'canControl': False,
+                        'metadata': {
+                            'title': 'Happy2!',
+                        }
+                    }
                 }
             ]
         }
@@ -168,7 +183,7 @@ class TestSnapserver(unittest.TestCase):
         self.assertEqual(self.server.version, '0.26.0')
         self.assertEqual(len(self.server.clients), 1)
         self.assertEqual(len(self.server.groups), 1)
-        self.assertEqual(len(self.server.streams), 1)
+        self.assertEqual(len(self.server.streams), 2)
         self.assertEqual(self.server.group('test').identifier, 'test')
         self.assertEqual(self.server.stream('stream').identifier, 'stream')
         self.assertEqual(self.server.client('test').identifier, 'test')
@@ -286,11 +301,25 @@ class TestSnapserver(unittest.TestCase):
     def test_on_group_stream_changed(self, mock_sync):
         data = {
             'id': 'test',
+            'stream_id': 'stream2'
+        }
+        self.server._on_group_stream_changed(data)
+        self.assertEqual(self.server.group('test').stream, 'stream2')
+
+        mock_sync.assert_not_called()
+
+    @mock.patch.object(Snapserver, '_synchronize_if_stream_missing')
+    def test_on_group_stream_changed_no_stream(self, mock_sync):
+        data = {
+            'id': 'test',
             'stream_id': 'other'
         }
         self.server._on_group_stream_changed(data)
-        self.assertEqual(self.server.group('test').stream, 'other')
-        mock_sync.assert_called_with('other')
+        self.assertEqual(self.server.group('test').stream, 'stream2')
+
+        mock_sync.assert_called_once()
+        _, args, _ = mock_sync.mock_calls[0]
+        self.assertEqual('other', args[0])
 
     def test_on_client_connect(self):
         cb = mock.MagicMock()
@@ -347,7 +376,8 @@ class TestSnapserver(unittest.TestCase):
         self.server._on_client_latency_changed(data)
         self.assertEqual(self.server.client('test').latency, 50)
 
-    def test_on_stream_update(self):
+    @mock.patch.object(Snapserver, '_synchronize_if_stream_missing')
+    def test_on_stream_update(self, mock_sync):
         data = {
             'id': 'stream',
             'stream': {
@@ -362,6 +392,7 @@ class TestSnapserver(unittest.TestCase):
         }
         self.server._on_stream_update(data)
         self.assertEqual(self.server.stream('stream').status, 'idle')
+        mock_sync.assert_not_called()
 
     @mock.patch.object(Snapserver, '_synchronize_if_stream_missing')
     def test_on_stream_update_new(self, mock_sync):
@@ -378,7 +409,9 @@ class TestSnapserver(unittest.TestCase):
             }
         }
         self.server._on_stream_update(data)
-        mock_sync.assert_called_with('stream_new')
+        mock_sync.assert_called_once()
+        _, args, _ = mock_sync.mock_calls[0]
+        self.assertEqual('stream_new', args[0])
 
     def test_on_meta_update(self):
         data = {

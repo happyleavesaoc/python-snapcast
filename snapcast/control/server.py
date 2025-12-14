@@ -376,7 +376,18 @@ class Snapserver():
     def _on_group_stream_changed(self, data):
         """Handle group stream change."""
         group = self._groups.get(data.get('id'))
-        self._synchronize_if_stream_missing(data.get('stream_id', None))
+        stream_id = data.get('stream_id', None)
+
+        if stream_id not in self._streams:
+            def update_callback():
+                self._on_update_callback_func()
+                group.update_stream(data)
+                for client_id in group.clients:
+                    self._clients.get(client_id).callback()
+
+            self._synchronize_if_stream_missing(stream_id, update_callback)
+            return
+
         group.update_stream(data)
         for client_id in group.clients:
             self._clients.get(client_id).callback()
@@ -446,9 +457,9 @@ class Snapserver():
             if data.get('stream', {}).get('uri', {}).get('query', {}).get('codec') == 'null':
                 _LOGGER.debug('stream %s is input-only, ignore', data.get('id'))
             else:
-                self._synchronize_if_stream_missing(data.get('id'))
+                self._synchronize_if_stream_missing(data.get('id'), self._on_update_callback_func)
 
-    def _synchronize_if_stream_missing(self, stream_id):
+    def _synchronize_if_stream_missing(self, stream_id, callback=None):
         """Ensure stream exists, otherwise synchronize."""
         if stream_id is None:
             return
@@ -457,8 +468,9 @@ class Snapserver():
 
             async def async_sync():
                 self.synchronize((await self.status())[0])
-                if self._on_update_callback_func and callable(self._on_update_callback_func):
-                    self._on_update_callback_func()
+                if callback and callable(callback):
+                    callback()
+
             asyncio.ensure_future(async_sync())
 
     def set_on_update_callback(self, func):
