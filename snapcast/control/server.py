@@ -378,7 +378,7 @@ class Snapserver():
         stream_id = data.get('stream_id', None)
 
         if stream_id not in self._streams:
-            def update_callback(found):
+            def update_callback(found, stream_id):
                 self._on_update_callback_func()
                 if not found:
                     return
@@ -458,7 +458,10 @@ class Snapserver():
             if data.get('stream', {}).get('uri', {}).get('query', {}).get('codec') == 'null':
                 _LOGGER.debug('stream %s is input-only, ignore', data.get('id'))
             else:
-                self._synchronize_if_stream_missing(data.get('id'), self._on_update_callback_func)
+                def update_callback(found, stream_id):
+                    if self._on_update_callback_func and callable(self._on_update_callback_func):
+                        self._on_update_callback_func()
+                self._synchronize_if_stream_missing(data.get('id'), update_callback)
 
     def _synchronize_if_stream_missing(self, stream_id, callback=None):
         """Ensure stream exists, otherwise synchronize."""
