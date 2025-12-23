@@ -379,7 +379,8 @@ class Snapserver():
 
         if stream_id not in self._streams:
             def update_callback(found, stream_id):
-                self._on_update_callback_func()
+                if self._on_update_callback_func and callable(self._on_update_callback_func):
+                    self._on_update_callback_func()
                 if not found:
                     return
                 group.update_stream(data)
