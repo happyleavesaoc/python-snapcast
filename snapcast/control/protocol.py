@@ -2,7 +2,10 @@
 
 import asyncio
 import json
+import logging
 import threading
+
+_LOGGER = logging.getLogger(__name__)
 
 SERVER_ONDISCONNECT = 'Server.OnDisconnect'
 
@@ -70,6 +73,7 @@ class SnapcastProtocol(asyncio.Protocol):
             # late/orphan response: request was cancelled, connection was
             # re-established, or another response with the same id already
             # ran cleanup. Drop silently.
+            _LOGGER.debug("dropping response for unknown id %s", identifier)
             return
         entry['data'] = data.get('result')
         entry['error'] = data.get('error')
