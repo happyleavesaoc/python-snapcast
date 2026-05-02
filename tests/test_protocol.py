@@ -164,7 +164,7 @@ class TestConcurrentAsyncRequests(unittest.TestCase):
                 await asyncio.sleep(0)
                 return t
 
-            tasks = [await issue() for _ in range(200)]
+            tasks = await asyncio.gather(*(issue() for _ in range(200)))
             try:
                 ids = []
                 for raw in proto._transport.written:
