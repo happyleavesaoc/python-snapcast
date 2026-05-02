@@ -2,7 +2,7 @@
 
 import asyncio
 import json
-import random
+import threading
 
 SERVER_ONDISCONNECT = 'Server.OnDisconnect'
 
@@ -27,6 +27,8 @@ class SnapcastProtocol(asyncio.Protocol):
         self._buffer = {}
         self._callbacks = callbacks
         self._data_buffer = ''
+        self._next_id_lock = threading.Lock()
+        self._next_id_value = 0
 
     def connection_made(self, transport):
         """When a connection is made."""
@@ -78,9 +80,19 @@ class SnapcastProtocol(asyncio.Protocol):
         if data.get('method') in self._callbacks:
             self._callbacks.get(data.get('method'))(data.get('params'))
 
+    def _next_request_id(self) -> int:
+        """Allocate a unique JSON-RPC request id.
+
+        Explicit lock keeps allocation correct under both GIL and free-threaded
+        (PEP 703) CPython. itertools.count() atomicity is implementation-defined.
+        """
+        with self._next_id_lock:
+            self._next_id_value += 1
+            return self._next_id_value
+
     async def request(self, method, params):
         """Send a JSONRPC request."""
-        identifier = random.randint(1, 1000)
+        identifier = self._next_request_id()
         self._transport.write(jsonrpc_request(method, identifier, params))
         self._buffer[identifier] = {'flag': asyncio.Event()}
         try:

@@ -5,6 +5,7 @@ cancellation cleanup, and thread-safety contract.
 """
 import asyncio
 import json
+import threading
 import unittest
 from unittest.mock import MagicMock
 
@@ -87,6 +88,46 @@ class TestRequestCancellation(unittest.TestCase):
             self.assertEqual(proto._buffer, {})
 
         asyncio.run(run())
+
+
+class TestRequestIdThreadSafety(unittest.TestCase):
+    """Bug A: request id allocation must be unique under concurrent multi-thread access.
+
+    Why this test exists: SnapcastProtocol is currently used from a single asyncio
+    thread, but the public API doesn't forbid asyncio.run_coroutine_threadsafe
+    from multiple threads, and a future refactor may legitimately need cross-thread
+    id allocation. If anyone switches the implementation to a non-thread-safe
+    primitive (itertools.count without GIL guarantees, or naive `+= 1`), this test
+    exposes it under contention. The test stays valid even under PEP 703
+    free-threaded builds where GIL-based atomicity assumptions silently fail.
+    """
+
+    def test_request_id_thread_safety_under_high_concurrency(self):
+        proto = make_protocol()
+        num_threads = 32
+        ids_per_thread = 1000
+        all_ids: list[int] = []
+        collect_lock = threading.Lock()
+
+        def worker():
+            local = [proto._next_request_id() for _ in range(ids_per_thread)]
+            with collect_lock:
+                all_ids.extend(local)
+
+        threads = [threading.Thread(target=worker) for _ in range(num_threads)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+
+        expected = num_threads * ids_per_thread
+        self.assertEqual(len(all_ids), expected)
+        self.assertEqual(
+            len(set(all_ids)),
+            expected,
+            f"Duplicate ids detected under thread contention: "
+            f"{expected - len(set(all_ids))} collisions",
+        )
 
 
 if __name__ == "__main__":
