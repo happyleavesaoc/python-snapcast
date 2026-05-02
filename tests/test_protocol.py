@@ -14,6 +14,15 @@ from unittest.mock import MagicMock
 from snapcast.control.protocol import SnapcastProtocol
 
 
+# Several tests below intentionally reach into protected attributes
+# (`_buffer`, `_transport`, `_next_request_id`) to verify internal invariants
+# that are not observable through the public API. This is a deliberate
+# whitebox approach: the protocol's correctness contracts (no orphan KeyError,
+# unique ids under contention, buffer cleanup on cancel) only manifest in
+# internal state. Treat these accesses as test-only coupling, not as a hint
+# that the attributes should be promoted to the public surface.
+
+
 class FakeTransport:
     """Captures bytes written to the transport for inspection."""
 
