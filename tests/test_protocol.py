@@ -172,5 +172,37 @@ class TestConcurrentAsyncRequests(unittest.TestCase):
         asyncio.run(run())
 
 
+class TestNoCollisionCorruption(unittest.TestCase):
+    """Bug A end-to-end: each request must get its own response back, never another's."""
+
+    def test_no_collision_corruption_under_load(self):
+        async def run():
+            proto = make_protocol()
+            num = 100
+
+            async def one_request(payload_marker):
+                # Issue the request, then synthesize a matching response
+                t = asyncio.create_task(proto.request("Server.GetStatus", {}))
+                await asyncio.sleep(0)
+                # Look up the id we just allocated
+                last_payload = json.loads(
+                    proto._transport.written[-1].decode().rstrip("\r\n")
+                )
+                req_id = last_payload["id"]
+                # Server replies with our marker as the result
+                proto.handle_response({"id": req_id, "result": {"marker": payload_marker}})
+                result, error = await t
+                return payload_marker, result, error
+
+            answers = await asyncio.gather(
+                *(one_request(i) for i in range(num))
+            )
+            for marker, result, error in answers:
+                self.assertIsNone(error)
+                self.assertEqual(result, {"marker": marker})
+
+        asyncio.run(run())
+
+
 if __name__ == "__main__":
     unittest.main()
