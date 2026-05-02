@@ -92,7 +92,7 @@ class TestRequestCancellation(unittest.TestCase):
         asyncio.run(run())
 
 
-class TestRequestIdThreadSafety(unittest.TestCase):
+class TestRequestIdConcurrentUniqueness(unittest.TestCase):
     """Bug A: request id allocation must be unique under concurrent multi-thread access.
 
     Why this test exists: SnapcastProtocol is currently used from a single asyncio
@@ -104,7 +104,13 @@ class TestRequestIdThreadSafety(unittest.TestCase):
     free-threaded builds where GIL-based atomicity assumptions silently fail.
     """
 
-    def test_request_id_thread_safety_under_high_concurrency(self):
+    def test_request_ids_unique_under_concurrent_threads(self):
+        """Asserts the uniqueness invariant of `_next_request_id` when called
+        from many threads. Under standard GIL CPython the lock is
+        correctness-by-inspection (the read-modify-write `i += 1` is
+        non-atomic but rarely tears in practice). Under PEP 703 free-threaded
+        builds the lock is load-bearing - without it, this test would expose
+        tearing."""
         proto = make_protocol()
         num_threads = 32
         ids_per_thread = 1000
