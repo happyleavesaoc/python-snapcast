@@ -204,5 +204,58 @@ class TestNoCollisionCorruption(unittest.TestCase):
         asyncio.run(run())
 
 
+class TestExistingBehaviorRegression(unittest.TestCase):
+    """Confirm prior behavior of SnapcastProtocol is preserved by the Bug A fixes."""
+
+    def test_happy_path_response_dispatch(self):
+        async def run():
+            proto = make_protocol()
+            t = asyncio.create_task(proto.request("Server.GetStatus", {}))
+            await asyncio.sleep(0)
+            req_id = json.loads(proto._transport.written[-1].decode().rstrip("\r\n"))["id"]
+            proto.handle_response({"id": req_id, "result": {"server": "ok"}})
+            result, error = await t
+            self.assertEqual(result, {"server": "ok"})
+            self.assertIsNone(error)
+
+        asyncio.run(run())
+
+    def test_connection_lost_signals_all_pending(self):
+        async def run():
+            proto = make_protocol()
+            t1 = asyncio.create_task(proto.request("A", {}))
+            t2 = asyncio.create_task(proto.request("B", {}))
+            await asyncio.sleep(0)
+            self.assertEqual(len(proto._buffer), 2)
+            proto.connection_lost(None)
+            r1, e1 = await t1
+            r2, e2 = await t2
+            self.assertIsNone(r1)
+            self.assertIsNone(r2)
+            self.assertEqual(e1, {"code": -1, "message": "connection lost"})
+            self.assertEqual(e2, {"code": -1, "message": "connection lost"})
+
+        asyncio.run(run())
+
+    def test_data_received_handles_partial_messages(self):
+        proto = make_protocol()
+        # Make a request first so the buffer has an entry to satisfy
+        async def run():
+            t = asyncio.create_task(proto.request("Server.GetStatus", {}))
+            await asyncio.sleep(0)
+            req_id = json.loads(proto._transport.written[-1].decode().rstrip("\r\n"))["id"]
+            full = json.dumps({"id": req_id, "result": {"ok": True}}) + "\r\n"
+            half_a = full[: len(full) // 2].encode()
+            half_b = full[len(full) // 2 :].encode()
+            proto.data_received(half_a)
+            # Buffer is incomplete (no \r\n yet) -> request still pending
+            self.assertEqual(len(proto._buffer), 1)
+            proto.data_received(half_b)
+            result, _ = await t
+            self.assertEqual(result, {"ok": True})
+
+        asyncio.run(run())
+
+
 if __name__ == "__main__":
     unittest.main()
