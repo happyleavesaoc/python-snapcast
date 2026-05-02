@@ -143,5 +143,34 @@ class TestMalformedResponse(unittest.TestCase):
         self.assertEqual(proto._buffer, {})
 
 
+class TestConcurrentAsyncRequests(unittest.TestCase):
+    """Bug A: multiple concurrent asyncio request() calls must each get a unique id."""
+
+    def test_concurrent_async_requests_get_distinct_ids(self):
+        async def run():
+            proto = make_protocol()
+
+            async def issue():
+                # Start request, but don't wait for the (never-coming) response
+                t = asyncio.create_task(proto.request("Server.GetStatus", {}))
+                await asyncio.sleep(0)
+                return t
+
+            tasks = [await issue() for _ in range(200)]
+            try:
+                ids = []
+                for raw in proto._transport.written:
+                    payload = json.loads(raw.decode().rstrip("\r\n"))
+                    ids.append(payload["id"])
+                self.assertEqual(len(ids), 200)
+                self.assertEqual(len(set(ids)), 200)
+            finally:
+                for t in tasks:
+                    t.cancel()
+                await asyncio.gather(*tasks, return_exceptions=True)
+
+        asyncio.run(run())
+
+
 if __name__ == "__main__":
     unittest.main()
