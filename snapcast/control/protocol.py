@@ -83,9 +83,10 @@ class SnapcastProtocol(asyncio.Protocol):
         identifier = random.randint(1, 1000)
         self._transport.write(jsonrpc_request(method, identifier, params))
         self._buffer[identifier] = {'flag': asyncio.Event()}
-        await self._buffer[identifier]['flag'].wait()
-        result = self._buffer[identifier].get('data')
-        error = self._buffer[identifier].get('error')
-        self._buffer[identifier].clear()
-        del self._buffer[identifier]
-        return (result, error)
+        try:
+            await self._buffer[identifier]['flag'].wait()
+            result = self._buffer[identifier].get('data')
+            error = self._buffer[identifier].get('error')
+            return (result, error)
+        finally:
+            self._buffer.pop(identifier, None)

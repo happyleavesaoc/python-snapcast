@@ -67,5 +67,27 @@ class TestHandleResponse(unittest.TestCase):
         self.assertEqual(proto._buffer, {})
 
 
+class TestRequestCancellation(unittest.TestCase):
+    """Bug A: cancelling an in-flight request() must always clean its buffer entry."""
+
+    def test_request_cancellation_cleans_buffer(self):
+        async def run():
+            proto = make_protocol()
+            task = asyncio.create_task(proto.request("Server.GetStatus", {}))
+            # Yield control so request() runs up to flag.wait()
+            await asyncio.sleep(0)
+            # Buffer should now hold one pending entry
+            self.assertEqual(len(proto._buffer), 1)
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
+            # After cancellation the buffer must be empty again
+            self.assertEqual(proto._buffer, {})
+
+        asyncio.run(run())
+
+
 if __name__ == "__main__":
     unittest.main()
