@@ -3,6 +3,8 @@
 These tests cover the JSON-RPC ID allocation, response dispatch,
 cancellation cleanup, and thread-safety contract.
 """
+from __future__ import annotations
+
 import asyncio
 import json
 import threading
