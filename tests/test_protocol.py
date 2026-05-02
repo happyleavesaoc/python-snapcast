@@ -130,5 +130,18 @@ class TestRequestIdThreadSafety(unittest.TestCase):
         )
 
 
+class TestMalformedResponse(unittest.TestCase):
+    """Bug A: handle_response must tolerate JSON-RPC responses without an id field."""
+
+    def test_response_with_missing_id_field_no_crash(self):
+        proto = make_protocol()
+        # No id key at all -> .get('id') returns None -> _buffer.get(None) is None -> early return
+        proto.handle_response({"result": {"foo": "bar"}})
+        # Empty result key, no id -> still no crash
+        proto.handle_response({})
+        # The protocol stays usable
+        self.assertEqual(proto._buffer, {})
+
+
 if __name__ == "__main__":
     unittest.main()
