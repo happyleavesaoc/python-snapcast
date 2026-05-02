@@ -63,9 +63,15 @@ class SnapcastProtocol(asyncio.Protocol):
     def handle_response(self, data):
         """Handle JSONRPC response."""
         identifier = data.get('id')
-        self._buffer[identifier]['data'] = data.get('result')
-        self._buffer[identifier]['error'] = data.get('error')
-        self._buffer[identifier]['flag'].set()
+        entry = self._buffer.get(identifier)
+        if entry is None:
+            # late/orphan response: request was cancelled, connection was
+            # re-established, or another response with the same id already
+            # ran cleanup. Drop silently.
+            return
+        entry['data'] = data.get('result')
+        entry['error'] = data.get('error')
+        entry['flag'].set()
 
     def handle_notification(self, data):
         """Handle JSONRPC notification."""

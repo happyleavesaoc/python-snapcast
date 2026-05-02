@@ -54,5 +54,18 @@ class TestProtocolBaseline(unittest.TestCase):
         self.assertEqual(proto._buffer, {})
 
 
+class TestHandleResponse(unittest.TestCase):
+    """Bug A: handle_response must not raise for unknown/orphan request ids."""
+
+    def test_handle_response_for_unknown_id_does_not_raise(self):
+        proto = make_protocol()
+        # No request was made, so buffer is empty
+        self.assertEqual(proto._buffer, {})
+        # Server sends a response with an id we don't know about
+        proto.handle_response({"id": 999, "result": {"server": {}}})
+        # Should be a no-op, not a KeyError
+        self.assertEqual(proto._buffer, {})
+
+
 if __name__ == "__main__":
     unittest.main()
