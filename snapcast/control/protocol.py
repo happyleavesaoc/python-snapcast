@@ -2,7 +2,10 @@
 
 import asyncio
 import json
-import random
+import logging
+import threading
+
+_LOGGER = logging.getLogger(__name__)
 
 SERVER_ONDISCONNECT = 'Server.OnDisconnect'
 
@@ -27,6 +30,8 @@ class SnapcastProtocol(asyncio.Protocol):
         self._buffer = {}
         self._callbacks = callbacks
         self._data_buffer = ''
+        self._next_id_lock = threading.Lock()
+        self._next_id_value = 0
 
     def connection_made(self, transport):
         """When a connection is made."""
@@ -63,23 +68,41 @@ class SnapcastProtocol(asyncio.Protocol):
     def handle_response(self, data):
         """Handle JSONRPC response."""
         identifier = data.get('id')
-        self._buffer[identifier]['data'] = data.get('result')
-        self._buffer[identifier]['error'] = data.get('error')
-        self._buffer[identifier]['flag'].set()
+        entry = self._buffer.get(identifier)
+        if entry is None:
+            # late/orphan response: request was cancelled, connection was
+            # re-established, or another response with the same id already
+            # ran cleanup. Drop silently.
+            _LOGGER.debug("dropping response for unknown id %s", identifier)
+            return
+        entry['data'] = data.get('result')
+        entry['error'] = data.get('error')
+        entry['flag'].set()
 
     def handle_notification(self, data):
         """Handle JSONRPC notification."""
         if data.get('method') in self._callbacks:
             self._callbacks.get(data.get('method'))(data.get('params'))
 
+    def _next_request_id(self) -> int:
+        """Allocate a unique JSON-RPC request id.
+
+        Explicit lock keeps allocation correct under both GIL and free-threaded
+        (PEP 703) CPython. itertools.count() atomicity is implementation-defined.
+        """
+        with self._next_id_lock:
+            self._next_id_value += 1
+            return self._next_id_value
+
     async def request(self, method, params):
         """Send a JSONRPC request."""
-        identifier = random.randint(1, 1000)
+        identifier = self._next_request_id()
         self._transport.write(jsonrpc_request(method, identifier, params))
         self._buffer[identifier] = {'flag': asyncio.Event()}
-        await self._buffer[identifier]['flag'].wait()
-        result = self._buffer[identifier].get('data')
-        error = self._buffer[identifier].get('error')
-        self._buffer[identifier].clear()
-        del self._buffer[identifier]
-        return (result, error)
+        try:
+            await self._buffer[identifier]['flag'].wait()
+            result = self._buffer[identifier].get('data')
+            error = self._buffer[identifier].get('error')
+            return (result, error)
+        finally:
+            self._buffer.pop(identifier, None)
