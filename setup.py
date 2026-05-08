@@ -1,4 +1,8 @@
 from setuptools import setup
+from pathlib import Path
+
+this_directory = Path(__file__).parent
+long_description = (this_directory / "README.md").read_text()
 
 setup(
     name='snapcast',
@@ -17,5 +21,7 @@ setup(
         'License :: OSI Approved :: MIT License',
         'Operating System :: OS Independent',
         'Programming Language :: Python :: 3',
-    ]
+    ],
+    long_description=long_description,
+    long_description_content_type='text/markdown'
 )

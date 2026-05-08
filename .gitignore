@@ -3,4 +3,7 @@ snapcast.egg-info*
 .cache
 .coverage
 .tox
+.venv
+build
+dist
 MANIFEST
