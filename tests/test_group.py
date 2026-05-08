@@ -101,3 +101,35 @@ class TestSnapgroup(unittest.TestCase):
         self.group.set_callback(cb)
         self.group.update_mute({'mute': True})
         cb.assert_called_with(self.group)
+
+    def test_bad_stream_status(self):
+        # Simulate a server where the requested stream id is missing
+        class DummyClient:
+            def __init__(self, identifier, friendly_name):
+                self.identifier = identifier
+                self.friendly_name = friendly_name
+
+        class DummyServer:
+            def __init__(self):
+                self._streams = {}
+                # provide clients list used by Snapgroup.friendly_name
+                self.clients = [DummyClient('a', 'A'), DummyClient('b', 'B')]
+
+            def stream(self, stream_identifier):
+                return self._streams[stream_identifier]
+
+            def client(self, identifier):
+                # return a client-like object for friendly_name lookup
+                for c in self.clients:
+                    if c.identifier == identifier:
+                        return c
+                raise KeyError(identifier)
+
+        # Replace the group's server with the dummy and set an unknown stream id
+        self.group._server = DummyServer()
+
+        # Updating the stream should not raise; accessing stream_status should
+        # not raise KeyError because the stream id is not present on the server.
+        self.group.update_stream({'stream_id': 'no stream'})
+        self.assertEqual(self.group.stream_status, 'unknown')
+
