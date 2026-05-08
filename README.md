@@ -49,6 +49,8 @@ server.clients[0].set_callback(my_update_func)
 loop.run_forever()
 ```
 
+See `example.py` for a basic working example.
+
 ### Client
 Note: This is experimental. Synchronization is not yet supported.
 Requires GStreamer 1.0.

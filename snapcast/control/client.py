@@ -35,6 +35,12 @@ class Snapclient():
         return None
 
     @property
+    def stream(self):
+        """Get stream."""
+        g = self.group
+        return self._server.stream(g.stream) if g else None
+
+    @property
     def friendly_name(self):
         """Get friendly name."""
         if len(self._client.get('config').get('name')):
