@@ -249,6 +249,40 @@ class TestSnapserver(unittest.TestCase):
         result = self._run(self.server.stream_setproperty('stream', 'foo', 'bar'))
         self.assertEqual(result, 'ok')
 
+    def test_stream_control_without_params(self):
+        transact = AsyncMock(return_value=('ok', None))
+        with mock.patch.object(self.server, '_transact', transact):
+            result = self._run(self.server.stream_control('stream', 'pause'))
+
+        self.assertEqual(result, 'ok')
+        transact.assert_awaited_once_with(
+            'Stream.Control',
+            {
+                'id': 'stream',
+                'command': 'pause',
+                'params': {},
+            }
+        )
+
+    def test_stream_control_with_params(self):
+        transact = AsyncMock(return_value=('ok', None))
+        with mock.patch.object(self.server, '_transact', transact):
+            result = self._run(
+                self.server.stream_control(
+                    'stream', 'setPosition', {'position': 12.5}
+                )
+            )
+
+        self.assertEqual(result, 'ok')
+        transact.assert_awaited_once_with(
+            'Stream.Control',
+            {
+                'id': 'stream',
+                'command': 'setPosition',
+                'params': {'position': 12.5},
+            }
+        )
+
     @mock.patch.object(Snapserver, '_transact', new=mock_transact('Stream.AddStream'))
     @mock.patch.object(Snapserver, 'synchronize', new=MagicMock())
     def test_stream_addstream(self):

@@ -233,11 +233,16 @@ class Snapserver():
         self._version_check(GROUP_SETNAME)
         return await self._request(GROUP_SETNAME, identifier, 'name', name)
 
-    async def stream_control(self, identifier, control_command, control_params):
-        """Set stream control."""
+    async def stream_control(self, identifier, control_command, control_params=None):
+        """Control stream playback."""
         self._version_check(STREAM_SETPROPERTY)
         return await self._request(
-            STREAM_CONTROL, identifier, 'command', control_command, control_params)
+            STREAM_CONTROL,
+            identifier,
+            parameters={
+                'command': control_command,
+                'params': control_params or {},
+            })
 
     async def stream_setmeta(self, identifier, meta):  # deprecated
         """Set stream metadata."""
