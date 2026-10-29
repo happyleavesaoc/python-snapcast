@@ -1,6 +1,7 @@
 """Snapcast protocol."""
 
 import asyncio
+import codecs
 import json
 import logging
 import threading
@@ -30,6 +31,7 @@ class SnapcastProtocol(asyncio.Protocol):
         self._buffer = {}
         self._callbacks = callbacks
         self._data_buffer = ''
+        self._decoder = codecs.getincrementaldecoder('utf-8')()
         self._next_id_lock = threading.Lock()
         self._next_id_value = 0
 
@@ -46,7 +48,7 @@ class SnapcastProtocol(asyncio.Protocol):
 
     def data_received(self, data):
         """Handle received data."""
-        self._data_buffer += data.decode()
+        self._data_buffer += self._decoder.decode(data)
         if not self._data_buffer.endswith('\r\n'):
             return
         data = self._data_buffer

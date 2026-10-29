@@ -274,5 +274,24 @@ class TestExistingBehaviorRegression(unittest.TestCase):
         asyncio.run(run())
 
 
+class TestMultiByteChunking(unittest.TestCase):
+    """Multi-byte UTF-8 characters split across TCP chunks must survive decoding."""
+
+    def test_message_split_at_any_byte(self):
+        name = "日本語"
+        message = (
+            '{"jsonrpc": "2.0", "method": "Client.OnVolumeChanged", '
+            f'"params": {{"name": "{name}"}}}}\r\n'
+        ).encode()
+
+        for cut in range(1, len(message)):
+            with self.subTest(cut=cut):
+                received = []
+                proto = SnapcastProtocol({"Client.OnVolumeChanged": received.append})
+                proto.data_received(message[:cut])
+                proto.data_received(message[cut:])
+                self.assertEqual(received, [{"name": name}])
+
+
 if __name__ == "__main__":
     unittest.main()
