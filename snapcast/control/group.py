@@ -1,6 +1,8 @@
 """Snapcast group."""
 import logging
 
+from snapcast.control.exceptions import SnapcastRequestError
+
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -44,8 +46,10 @@ class Snapgroup():
 
     async def set_stream(self, stream_id):
         """Set group stream."""
+        result = await self._server.group_stream(self.identifier, stream_id)
+        if isinstance(result, dict) and 'code' in result:
+            raise SnapcastRequestError('Group.SetStream', result)
         self._group['stream_id'] = stream_id
-        await self._server.group_stream(self.identifier, stream_id)
         _LOGGER.debug('set stream to %s on %s', stream_id, self.friendly_name)
 
     @property
